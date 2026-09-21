@@ -1,0 +1,98 @@
+#+TITLE: Lisp-RPC Go
+
+Go implementation of [[https://lisp-rpc.ccqpein.me][Lisp-RPC]], a lightweight, S-expression-based Remote Procedure Call protocol designed for simplicity and flexibility.
+
+This repository translates the design and logic of the reference Rust implementation ([[https://github.com/ccqpein/lisp-rpc][lisp-rpc]]) into idiomatic Go.
+
+* Package Overview
+
+** =parser= (=github.com/ccqpein/lisp-rpc-golang/parser=)
+
+The core tokenizer and parser for Lisp-RPC S-expressions. It supports:
+- Full S-expression parsing: Atoms (symbols, string literals, keywords, numbers), lists ~(...)~, quotes ~'...~, and comments ~;...~.
+- Incremental / chunked streaming tokenization with multi-byte UTF-8 boundary buffering.
+- Resumable parser state machine (~ParsingStatus~, ~ParsedExpr~) for network streams and async readers.
+- ~StreamParser~ for consuming expressions from any standard ~io.Reader~ (e.g. ~net.Conn~, ~os.File~, ~bytes.Buffer~).
+
+* Rust to Go Mapping Reference
+
+| Rust (=lisp-rpc-rust-parser=) | Go (=parser=) | Description |
+|-------------------------------+---------------+-------------|
+| ~ParserError~ | ~ParserError~, ~ParserErrorKind~ | Error enum and types (~ErrInvalidStart~, ~ErrInvalidToken~, ~ErrCorruptData~, ~ErrUnknownToken~) |
+| ~TypeValueNumber~ | ~TypeValueNumber~ | Numeric representation with ~Kind~ (~NumberInt~, ~NumberFloat~), ~ToInt()~, ~ToFloat()~, ~Add()~, ~Equal()~ |
+| ~TypeValue~ | ~TypeValue~ | Typed atom value: ~Symbol~, ~String~, ~Keyword~, ~Number~ |
+| ~Atom~ | ~Atom~ | Atomic token: ~Read()~, ~ReadString()~, ~ReadKeyword()~, ~ReadNumber()~ |
+| ~Expr~ | ~Expr~ | AST node: ~ExprAtom~, ~ExprList~, ~ExprQuote~, ~ExprComment~, with ~.String()~, ~.Nth()~, ~.FilterOutAllComments()~ |
+| ~ParsingStatus~ | ~ParsingStatus~ | Parser state machine: ~Clean~, ~InReadExpr~, ~InReadString~, ~InReadQuote~, ~InReadKeyword~, ~InReadComment~, ~InReadAtom~, ~Error~ |
+| ~ParsedExpr~ | ~ParsedExpr~ | Parse outcome: ~ParsedCompleted~ vs ~ParsedIncomplete~ |
+| ~Parser~ | ~Parser~ | Main parser instance: ~Tokenize()~, ~Parse()~, ~ParseOne()~, ~ReadRouter()~, etc. |
+| ~StreamParser<S>~ | ~StreamParser~ | Streaming parser wrapping ~io.Reader~ with ~.Next()~, ~.All()~, and ~.Iter()~ |
+
+* Usage Examples
+
+** 1. Basic Parsing
+
+#+begin_src go
+  package main
+
+  import (
+      "fmt"
+      "strings"
+
+      "github.com/ccqpein/lisp-rpc-golang/parser"
+  )
+
+  func main() {
+      p := parser.New()
+
+      input := `(def-rpc get-book '(:title 'string :id 1984) 'book-info)`
+      if err := p.Tokenize(strings.NewReader(input)); err != nil {
+          panic(err)
+      }
+
+      if err := p.Parse(); err != nil {
+          panic(err)
+      }
+
+      for _, expr := range p.Exprs {
+          fmt.Println("Parsed:", expr.String())
+      }
+  }
+#+end_src
+
+** 2. Streaming Parser (=io.Reader=)
+
+~StreamParser~ parses S-expressions on the fly as byte chunks arrive over a stream (such as a network connection or pipe):
+
+#+begin_src go
+  package main
+
+  import (
+      "fmt"
+      "strings"
+
+      "github.com/ccqpein/lisp-rpc-golang/parser"
+  )
+
+  func main() {
+      reader := strings.NewReader(`(foo 1) :keyword "hello world" (bar 2)`)
+      sp := parser.NewStreamParser(reader)
+
+      // Modern Go range loop over iterator
+      for expr, err := range sp.Iter() {
+          if err != nil {
+              panic(err)
+          }
+          fmt.Println("Received Expr:", expr.String())
+      }
+  }
+#+end_src
+
+* Running Tests
+
+Unit and integration tests are hosted in [[https://github.com/ccqpein/lisp-rpc-tests][lisp-rpc-tests]] under the ~golang/~ test workspace:
+
+#+begin_src shell
+  cd ../lisp-rpc-tests/golang
+  go test -v -race ./...
+#+end_src
