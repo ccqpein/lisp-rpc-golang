@@ -14,19 +14,36 @@ The core tokenizer and parser for Lisp-RPC S-expressions. It supports:
 - Resumable parser state machine (~ParsingStatus~, ~ParsedExpr~) for network streams and async readers.
 - ~StreamParser~ for consuming expressions from any standard ~io.Reader~ (e.g. ~net.Conn~, ~os.File~, ~bytes.Buffer~).
 
+** =rawdata= (=github.com/ccqpein/lisp-rpc-golang/rawdata=)
+
+Dynamic, schema-free S-expression parsing and manipulation for Plain Mode:
+- Named S-expression data structures (~ExprData~): ~(name :key1 val1 :key2 val2)~.
+- Quoted sequence lists (~ListData~): ~'("a" "b" 1)~.
+- Quoted key-value maps (~MapData~): ~'(:key value)~.
+- Unified ~Data~ enum with ~Get()~, ~GetString()~, ~ToInt()~, ~ToFloat()~, and deep ~Equal()~.
+- Streaming data adapter (~RawDataGenerator~) wrapping ~StreamParser~.
+- File parser and indexer (~DataFile~).
+
 * Rust to Go Mapping Reference
 
-| Rust (=lisp-rpc-rust-parser=) | Go (=parser=)                  | Description                                                                                                         |
-|-----------------------------+------------------------------+---------------------------------------------------------------------------------------------------------------------|
-| ~ParserError~                 | ~ParserError~, ~ParserErrorKind~ | Error enum and types (~ErrInvalidStart~, ~ErrInvalidToken~, ~ErrCorruptData~, ~ErrUnknownToken~)                            |
-| ~TypeValueNumber~             | ~TypeValueNumber~              | Numeric representation with ~Kind~ (~NumberInt~, ~NumberFloat~), ~ToInt()~, ~ToFloat()~, ~Add()~, ~Equal()~                       |
-| ~TypeValue~                   | ~TypeValue~                    | Typed atom value: ~Symbol~, ~String~, ~Keyword~, ~Number~                                                                   |
-| ~Atom~                        | ~Atom~                         | Atomic token: ~Read()~, ~ReadString()~, ~ReadKeyword()~, ~ReadNumber()~                                                     |
-| ~Expr~                        | ~Expr~                         | AST node: ~ExprAtom~, ~ExprList~, ~ExprQuote~, ~ExprComment~, with ~.String()~, ~.Nth()~, ~.FilterOutAllComments()~               |
-| ~ParsingStatus~               | ~ParsingStatus~                | Parser state machine: ~Clean~, ~InReadExpr~, ~InReadString~, ~InReadQuote~, ~InReadKeyword~, ~InReadComment~, ~InReadAtom~, ~Error~ |
-| ~ParsedExpr~                  | ~ParsedExpr~                   | Parse outcome: ~ParsedCompleted~ vs ~ParsedIncomplete~                                                                  |
-| ~Parser~                      | ~Parser~                       | Main parser instance: ~Tokenize()~, ~Parse()~, ~ParseOne()~, ~ReadRouter()~, etc.                                           |
-| ~StreamParser<S>~             | ~StreamParser~                 | Streaming parser wrapping ~io.Reader~ with ~.Next()~, ~.All()~, and ~.Iter()~                                               |
+| Rust (=lisp-rpc-rust-parser= / =lisp-rpc-rust-raw-data=) | Go (=parser= / =rawdata=)        | Description                                                                                                         |
+|----------------------------------------------------------+----------------------------------+---------------------------------------------------------------------------------------------------------------------|
+| ~ParserError~                                            | ~ParserError~, ~ParserErrorKind~ | Error enum and types (~ErrInvalidStart~, ~ErrInvalidToken~, ~ErrCorruptData~, ~ErrUnknownToken~)                            |
+| ~TypeValueNumber~                                        | ~TypeValueNumber~                | Numeric representation with ~Kind~ (~NumberInt~, ~NumberFloat~), ~ToInt()~, ~ToFloat()~, ~Add()~, ~Equal()~                       |
+| ~TypeValue~                                              | ~TypeValue~                      | Typed atom value: ~Symbol~, ~String~, ~Keyword~, ~Number~                                                                   |
+| ~Atom~                                                   | ~Atom~                           | Atomic token: ~Read()~, ~ReadString()~, ~ReadKeyword()~, ~ReadNumber()~                                                     |
+| ~Expr~                                                   | ~Expr~                           | AST node: ~ExprAtom~, ~ExprList~, ~ExprQuote~, ~ExprComment~, with ~.String()~, ~.Nth()~, ~.FilterOutAllComments()~               |
+| ~ParsingStatus~                                          | ~ParsingStatus~                  | Parser state machine: ~Clean~, ~InReadExpr~, ~InReadString~, ~InReadQuote~, ~InReadKeyword~, ~InReadComment~, etc.          |
+| ~ParsedExpr~                                             | ~ParsedExpr~                     | Parse outcome: ~ParsedCompleted~ vs ~ParsedIncomplete~                                                                  |
+| ~Parser~                                                 | ~Parser~                         | Main parser instance: ~Tokenize()~, ~Parse()~, ~ParseOne()~, ~ReadRouter()~, etc.                                           |
+| ~StreamParser<S>~                                        | ~StreamParser~                   | Streaming parser wrapping ~io.Reader~ with ~.Next()~, ~.All()~, and ~.Iter()~                                               |
+| ~Data~                                                   | ~Data~                           | Root dynamic data sum type with ~Get()~, ~GetString()~, ~ToInt()~, ~ToFloat()~                                      |
+| ~ExprData~                                               | ~ExprData~                       | Named S-expression data structure: ~(name :k1 v1 :k2 v2)~                                                           |
+| ~ListData~                                               | ~ListData~                       | Quoted sequence data: ~'("a" "b" 1)~                                                                                |
+| ~MapData~                                                | ~MapData~                        | Quoted key-value map: ~'(:k1 v1 :k2 v2)~                                                                            |
+| ~RawDataGenerator<S>~                                    | ~RawDataGenerator~               | Streaming dynamic data adapter wrapping ~StreamParser~                                                              |
+| ~DataFile~                                               | ~DataFile~                       | Parses and indexes multiple S-expression data records from file                                                     |
+| ~IntoData~                                               | ~IntoData~, ~ToData~             | Value conversion into dynamic ~Data~                                                                                |
 
 * Usage Examples
 
@@ -60,7 +77,46 @@ The core tokenizer and parser for Lisp-RPC S-expressions. It supports:
   }
 #+end_src
 
-** 2. Streaming Parser (=io.Reader=)
+** 2. Dynamic Raw Data
+
+#+begin_src go
+  package main
+
+  import (
+      "fmt"
+
+      "github.com/ccqpein/lisp-rpc-golang/rawdata"
+  )
+
+  func main() {
+      // Create a dynamic RPC data expression: (get-book :title "The Hobbit" :year 1937)
+      rpcData, err := rawdata.NewData(
+          "get-book",
+          rawdata.NewPair("title", "The Hobbit"),
+          rawdata.NewPair("year", 1937),
+      )
+      if err != nil {
+          panic(err)
+      }
+
+      // Serialize to S-expression string
+      rawStr := rpcData.String()
+      fmt.Println("Serialized:", rawStr)
+
+      // Parse back from string
+      parsed, err := rawdata.DataFromRootStr(rawStr, nil)
+      if err != nil {
+          panic(err)
+      }
+
+      if yearVal := parsed.Get("year"); yearVal != nil {
+          year, _ := yearVal.ToInt()
+          fmt.Println("Year:", year)
+      }
+  }
+#+end_src
+
+** 3. Streaming Parser (=io.Reader=)
 
 ~StreamParser~ parses S-expressions on the fly as byte chunks arrive over a stream (such as a network connection or pipe):
 
@@ -86,4 +142,12 @@ The core tokenizer and parser for Lisp-RPC S-expressions. It supports:
           fmt.Println("Received Expr:", expr.String())
       }
   }
+#+end_src
+
+* Running Tests
+
+Unit and integration tests are hosted in [[https://github.com/ccqpein/lisp-rpc-tests][lisp-rpc-tests]] under the ~golang/~ test workspace:
+
+#+begin_src shell
+  go test -v -race ./...
 #+end_src
