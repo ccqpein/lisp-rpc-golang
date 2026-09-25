@@ -26,24 +26,24 @@ Dynamic, schema-free S-expression parsing and manipulation for Plain Mode:
 
 * Rust to Go Mapping Reference
 
-| Rust (=lisp-rpc-rust-parser= / =lisp-rpc-rust-raw-data=) | Go (=parser= / =rawdata=)        | Description                                                                                                         |
-|----------------------------------------------------------+----------------------------------+---------------------------------------------------------------------------------------------------------------------|
-| ~ParserError~                                            | ~ParserError~, ~ParserErrorKind~ | Error enum and types (~ErrInvalidStart~, ~ErrInvalidToken~, ~ErrCorruptData~, ~ErrUnknownToken~)                            |
-| ~TypeValueNumber~                                        | ~TypeValueNumber~                | Numeric representation with ~Kind~ (~NumberInt~, ~NumberFloat~), ~ToInt()~, ~ToFloat()~, ~Add()~, ~Equal()~                       |
-| ~TypeValue~                                              | ~TypeValue~                      | Typed atom value: ~Symbol~, ~String~, ~Keyword~, ~Number~                                                                   |
-| ~Atom~                                                   | ~Atom~                           | Atomic token: ~Read()~, ~ReadString()~, ~ReadKeyword()~, ~ReadNumber()~                                                     |
-| ~Expr~                                                   | ~Expr~                           | AST node: ~ExprAtom~, ~ExprList~, ~ExprQuote~, ~ExprComment~, with ~.String()~, ~.Nth()~, ~.FilterOutAllComments()~               |
-| ~ParsingStatus~                                          | ~ParsingStatus~                  | Parser state machine: ~Clean~, ~InReadExpr~, ~InReadString~, ~InReadQuote~, ~InReadKeyword~, ~InReadComment~, etc.          |
-| ~ParsedExpr~                                             | ~ParsedExpr~                     | Parse outcome: ~ParsedCompleted~ vs ~ParsedIncomplete~                                                                  |
-| ~Parser~                                                 | ~Parser~                         | Main parser instance: ~Tokenize()~, ~Parse()~, ~ParseOne()~, ~ReadRouter()~, etc.                                           |
-| ~StreamParser<S>~                                        | ~StreamParser~                   | Streaming parser wrapping ~io.Reader~ with ~.Next()~, ~.All()~, and ~.Iter()~                                               |
-| ~Data~                                                   | ~Data~                           | Root dynamic data sum type with ~Get()~, ~GetString()~, ~ToInt()~, ~ToFloat()~                                      |
-| ~ExprData~                                               | ~ExprData~                       | Named S-expression data structure: ~(name :k1 v1 :k2 v2)~                                                           |
-| ~ListData~                                               | ~ListData~                       | Quoted sequence data: ~'("a" "b" 1)~                                                                                |
-| ~MapData~                                                | ~MapData~                        | Quoted key-value map: ~'(:k1 v1 :k2 v2)~                                                                            |
-| ~RawDataGenerator<S>~                                    | ~RawDataGenerator~               | Streaming dynamic data adapter wrapping ~StreamParser~                                                              |
-| ~DataFile~                                               | ~DataFile~                       | Parses and indexes multiple S-expression data records from file                                                     |
-| ~IntoData~                                               | ~IntoData~, ~ToData~             | Value conversion into dynamic ~Data~                                                                                |
+| Rust (=lisp-rpc-rust-parser= / =lisp-rpc-rust-raw-data=) | Go (=parser= / =rawdata=)        | Description                                                                                            |
+|------------------------------------------------------+------------------------------+--------------------------------------------------------------------------------------------------------|
+| ~ParserError~                                          | ~ParserError~, ~ParserErrorKind~ | Error enum and types (~ErrInvalidStart~, ~ErrInvalidToken~, ~ErrCorruptData~, ~ErrUnknownToken~)               |
+| ~TypeValueNumber~                                      | ~TypeValueNumber~              | Numeric representation with ~Kind~ (~NumberInt~, ~NumberFloat~), ~ToInt()~, ~ToFloat()~, ~Add()~, ~Equal()~          |
+| ~TypeValue~                                            | ~TypeValue~                    | Typed atom value: ~Symbol~, ~String~, ~Keyword~, ~Number~                                                      |
+| ~Atom~                                                 | ~Atom~                         | Atomic token: ~Read()~, ~ReadString()~, ~ReadKeyword()~, ~ReadNumber()~                                        |
+| ~Expr~                                                 | ~Expr~                         | AST node: ~ExprAtom~, ~ExprList~, ~ExprQuote~, ~ExprComment~, with ~.String()~, ~.Nth()~, ~.FilterOutAllComments()~  |
+| ~ParsingStatus~                                        | ~ParsingStatus~                | Parser state machine: ~Clean~, ~InReadExpr~, ~InReadString~, ~InReadQuote~, ~InReadKeyword~, ~InReadComment~, etc. |
+| ~ParsedExpr~                                           | ~ParsedExpr~                   | Parse outcome: ~ParsedCompleted~ vs ~ParsedIncomplete~                                                     |
+| ~Parser~                                               | ~Parser~                       | Main parser instance: ~Tokenize()~, ~Parse()~, ~ParseOne()~, ~ReadRouter()~, etc.                              |
+| ~StreamParser<S>~                                      | ~StreamParser~                 | Streaming parser wrapping ~io.Reader~ with ~.Next()~, ~.All()~, and ~.Iter()~                                  |
+| ~Data~                                                 | ~Data~                         | Root dynamic data sum type with ~Get()~, ~GetString()~, ~ToInt()~, ~ToFloat()~                                 |
+| ~ExprData~                                             | ~ExprData~                     | Named S-expression data structure: ~(name :k1 v1 :k2 v2)~                                                |
+| ~ListData~                                             | ~ListData~                     | Quoted sequence data: ~'("a" "b" 1)~                                                                     |
+| ~MapData~                                              | ~MapData~                      | Quoted key-value map: ~'(:k1 v1 :k2 v2)~                                                                 |
+| ~RawDataGenerator<S>~                                  | ~RawDataGenerator~             | Streaming dynamic data adapter wrapping ~StreamParser~                                                   |
+| ~DataFile~                                             | ~DataFile~                     | Parses and indexes multiple S-expression data records from file                                        |
+| ~IntoData~                                             | ~IntoData~, ~ToData~             | Value conversion into dynamic ~Data~                                                                     |
 
 * Usage Examples
 
@@ -142,12 +142,4 @@ Dynamic, schema-free S-expression parsing and manipulation for Plain Mode:
           fmt.Println("Received Expr:", expr.String())
       }
   }
-#+end_src
-
-* Running Tests
-
-Unit and integration tests are hosted in [[https://github.com/ccqpein/lisp-rpc-tests][lisp-rpc-tests]] under the ~golang/~ test workspace:
-
-#+begin_src shell
-  go test -v -race ./...
 #+end_src
