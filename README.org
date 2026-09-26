@@ -139,7 +139,7 @@ Server dispatch engine and RPC handler registration:
   )
 
   type GetBook struct {
-      Title string `lisp:"title"`
+      Title string `lisp-rpc:"title"`
   }
 
   func (GetBook) ToRPCType() server.RPCType {
@@ -147,7 +147,7 @@ Server dispatch engine and RPC handler registration:
   }
 
   type BookResp struct {
-      Author string `lisp:"author"`
+      Author string `lisp-rpc:"author"`
   }
 
   func main() {

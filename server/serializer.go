@@ -35,16 +35,9 @@ func toKebabCase(s string) string {
 }
 
 func fieldKey(f reflect.StructField) string {
-	tag := f.Tag.Get("lisp")
+	tag := f.Tag.Get("lisp-rpc")
 	if tag != "" && tag != "-" {
 		return tag
-	}
-	jsonTag := f.Tag.Get("json")
-	if jsonTag != "" && jsonTag != "-" {
-		parts := strings.Split(jsonTag, ",")
-		if parts[0] != "" {
-			return parts[0]
-		}
 	}
 	return toKebabCase(f.Name)
 }
