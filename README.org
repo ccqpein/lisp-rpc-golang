@@ -24,26 +24,35 @@ Dynamic, schema-free S-expression parsing and manipulation for Plain Mode:
 - Streaming data adapter (~RawDataGenerator~) wrapping ~StreamParser~.
 - File parser and indexer (~DataFile~).
 
+** =server= (=github.com/ccqpein/lisp-rpc-golang/server=)
+
+Server dispatch engine and RPC handler registration:
+- Synchronous and asynchronous handler registration (~Register~, ~RegisterAsync~).
+- Automatic struct serialization/deserialization between Go types and Lisp S-expressions.
+- Support for ~context.Context~ in handler functions.
+- Native ~net/http.Handler~ implementation for standard Go HTTP servers and ~httptest~.
+- Command routing matching Rust Lisp-RPC dispatch semantics.
+
 * Rust to Go Mapping Reference
 
-| Rust (=lisp-rpc-rust-parser= / =lisp-rpc-rust-raw-data=) | Go (=parser= / =rawdata=)        | Description                                                                                            |
-|------------------------------------------------------+------------------------------+--------------------------------------------------------------------------------------------------------|
-| ~ParserError~                                          | ~ParserError~, ~ParserErrorKind~ | Error enum and types (~ErrInvalidStart~, ~ErrInvalidToken~, ~ErrCorruptData~, ~ErrUnknownToken~)               |
-| ~TypeValueNumber~                                      | ~TypeValueNumber~              | Numeric representation with ~Kind~ (~NumberInt~, ~NumberFloat~), ~ToInt()~, ~ToFloat()~, ~Add()~, ~Equal()~          |
-| ~TypeValue~                                            | ~TypeValue~                    | Typed atom value: ~Symbol~, ~String~, ~Keyword~, ~Number~                                                      |
-| ~Atom~                                                 | ~Atom~                         | Atomic token: ~Read()~, ~ReadString()~, ~ReadKeyword()~, ~ReadNumber()~                                        |
-| ~Expr~                                                 | ~Expr~                         | AST node: ~ExprAtom~, ~ExprList~, ~ExprQuote~, ~ExprComment~, with ~.String()~, ~.Nth()~, ~.FilterOutAllComments()~  |
-| ~ParsingStatus~                                        | ~ParsingStatus~                | Parser state machine: ~Clean~, ~InReadExpr~, ~InReadString~, ~InReadQuote~, ~InReadKeyword~, ~InReadComment~, etc. |
-| ~ParsedExpr~                                           | ~ParsedExpr~                   | Parse outcome: ~ParsedCompleted~ vs ~ParsedIncomplete~                                                     |
-| ~Parser~                                               | ~Parser~                       | Main parser instance: ~Tokenize()~, ~Parse()~, ~ParseOne()~, ~ReadRouter()~, etc.                              |
-| ~StreamParser<S>~                                      | ~StreamParser~                 | Streaming parser wrapping ~io.Reader~ with ~.Next()~, ~.All()~, and ~.Iter()~                                  |
-| ~Data~                                                 | ~Data~                         | Root dynamic data sum type with ~Get()~, ~GetString()~, ~ToInt()~, ~ToFloat()~                                 |
-| ~ExprData~                                             | ~ExprData~                     | Named S-expression data structure: ~(name :k1 v1 :k2 v2)~                                                |
-| ~ListData~                                             | ~ListData~                     | Quoted sequence data: ~'("a" "b" 1)~                                                                     |
-| ~MapData~                                              | ~MapData~                      | Quoted key-value map: ~'(:k1 v1 :k2 v2)~                                                                 |
-| ~RawDataGenerator<S>~                                  | ~RawDataGenerator~             | Streaming dynamic data adapter wrapping ~StreamParser~                                                   |
-| ~DataFile~                                             | ~DataFile~                     | Parses and indexes multiple S-expression data records from file                                        |
-| ~IntoData~                                             | ~IntoData~, ~ToData~             | Value conversion into dynamic ~Data~                                                                     |
+| Rust (=lisp-rpc= crates) | Go (=lisp-rpc-golang=)         | Description                                                                              |
+|------------------------+------------------------------+------------------------------------------------------------------------------------------|
+| ~ParserError~            | ~ParserError~, ~ParserErrorKind~ | Error enum and types (~ErrInvalidStart~, ~ErrInvalidToken~, ~ErrCorruptData~, ~ErrUnknownToken~) |
+| ~TypeValueNumber~        | ~TypeValueNumber~              | Numeric representation with ~Kind~ (~NumberInt~, ~NumberFloat~), ~ToInt()~, ~ToFloat()~, ~Add()~     |
+| ~TypeValue~              | ~TypeValue~                    | Typed atom value: ~Symbol~, ~String~, ~Keyword~, ~Number~                                        |
+| ~Atom~                   | ~Atom~                         | Atomic token: ~Read()~, ~ReadString()~, ~ReadKeyword()~, ~ReadNumber()~                          |
+| ~Expr~                   | ~Expr~                         | AST node: ~ExprAtom~, ~ExprList~, ~ExprQuote~, ~ExprComment~, with ~.String()~, ~.FilterOutComments~ |
+| ~ParsingStatus~          | ~ParsingStatus~                | Parser state machine: ~Clean~, ~InReadExpr~, ~InReadString~, ~InReadQuote~, ~InReadKeyword~, etc.  |
+| ~StreamParser<S>~        | ~StreamParser~                 | Streaming parser wrapping ~io.Reader~ with ~.Next()~, ~.All()~, and ~.Iter()~                    |
+| ~Data~                   | ~Data~                         | Root dynamic data sum type with ~Get()~, ~GetString()~, ~ToInt()~, ~ToFloat()~                   |
+| ~ExprData~               | ~ExprData~                     | Named S-expression data structure: ~(name :k1 v1 :k2 v2)~                                  |
+| ~ListData~               | ~ListData~                     | Quoted sequence data: ~'("a" "b" 1)~                                                       |
+| ~MapData~                | ~MapData~                      | Quoted key-value map: ~'(:k1 v1 :k2 v2)~                                                   |
+| ~RawDataGenerator<S>~    | ~RawDataGenerator~             | Streaming dynamic data adapter wrapping ~StreamParser~                                     |
+| ~DataFile~               | ~DataFile~                     | Parses and indexes multiple S-expression data records from file                          |
+| ~RPCType~                | ~RPCType~                      | Classification of RPC commands and messages (~RPC~, ~Msg~, ~Map~, ~List~, ~V~)                     |
+| ~ToRPCType~              | ~ToRPCType~                    | Interface defining RPC classification for types                                          |
+| ~RPCServer~              | ~Server~, ~RPCServer~            | Dispatch server with ~.Register()~, ~.RegisterAsync()~, ~.Handle()~, ~.ServeHTTP()~              |
 
 * Usage Examples
 
@@ -116,30 +125,46 @@ Dynamic, schema-free S-expression parsing and manipulation for Plain Mode:
   }
 #+end_src
 
-** 3. Streaming Parser (=io.Reader=)
-
-~StreamParser~ parses S-expressions on the fly as byte chunks arrive over a stream (such as a network connection or pipe):
+** 3. RPC Server with HTTP Integration
 
 #+begin_src go
   package main
 
   import (
+      "context"
       "fmt"
-      "strings"
+      "net/http"
 
-      "github.com/ccqpein/lisp-rpc-golang/parser"
+      "github.com/ccqpein/lisp-rpc-golang/server"
   )
 
-  func main() {
-      reader := strings.NewReader(`(foo 1) :keyword "hello world" (bar 2)`)
-      sp := parser.NewStreamParser(reader)
+  type GetBook struct {
+      Title string `lisp:"title"`
+  }
 
-      // Modern Go range loop over iterator
-      for expr, err := range sp.Iter() {
-          if err != nil {
-              panic(err)
-          }
-          fmt.Println("Received Expr:", expr.String())
-      }
+  func (GetBook) ToRPCType() server.RPCType {
+      return server.NewRPCTypeRPC("get-book")
+  }
+
+  type BookResp struct {
+      Author string `lisp:"author"`
+  }
+
+  func main() {
+      s := server.New()
+
+      // Register an RPC handler
+      s.Register(func(ctx context.Context, req GetBook) (BookResp, error) {
+          return BookResp{Author: "Author of " + req.Title}, nil
+      })
+
+      // 1. Direct dispatch
+      resp, _ := s.Handle(`(get-book :title "The Hobbit")`)
+      fmt.Println("Response:", resp)
+      // Output: (book-resp :author "Author of The Hobbit")
+
+      // 2. Start HTTP server directly (server implements http.Handler)
+      http.ListenAndServe(":8080", s)
   }
 #+end_src
+
