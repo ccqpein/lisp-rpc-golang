@@ -151,26 +151,23 @@ func (p *Parser) RestoreScannedTokens() {
 }
 
 // Clear clears the tokens, expressions, byte cache, and resets parsing status.
-func (p *Parser) Clear() error {
-	_ = p.ClearExprs()
-	_ = p.ClearTokens()
+func (p *Parser) Clear() {
+	p.ClearExprs()
+	p.ClearTokens()
 	p.byteCache = nil
 	p.Status = NewStatusClean()
 	p.recorded = nil
 	p.recording = false
-	return nil
 }
 
 // ClearTokens clears the tokens in the parser.
-func (p *Parser) ClearTokens() error {
+func (p *Parser) ClearTokens() {
 	p.Tokens = nil
-	return nil
 }
 
 // ClearExprs clears the expressions in the parser.
-func (p *Parser) ClearExprs() error {
+func (p *Parser) ClearExprs() {
 	p.Exprs = nil
-	return nil
 }
 
 // Parse parses all tokens in the parser into expression nodes.
@@ -275,19 +272,19 @@ func (p *Parser) ReadAtom() (ParsedExpr, error) {
 
 	if p.readNumberConfig {
 		if n, err := strconv.ParseInt(tok, 10, 64); err == nil {
-			return NewParsedCompleted(NewExprAtom(ReadNumber(tok, NewInt(n)))), nil
+			return NewParsedCompleted(NewExprAtom(NewAtomNumber(NewInt(n)))), nil
 		}
 		if len(tok) > 0 {
 			c := tok[0]
 			if (c >= '0' && c <= '9') || c == '.' || c == '+' || c == '-' {
 				if f, err := strconv.ParseFloat(tok, 64); err == nil {
-					return NewParsedCompleted(NewExprAtom(ReadNumber(tok, NewFloat(f)))), nil
+					return NewParsedCompleted(NewExprAtom(NewAtomNumber(NewFloat(f)))), nil
 				}
 			}
 		}
 	}
 
-	return NewParsedCompleted(NewExprAtom(Read(tok))), nil
+	return NewParsedCompleted(NewExprAtom(NewAtomSymbol(tok))), nil
 }
 
 // ReadQuote reads a quoted expression from the token queue.
@@ -427,7 +424,7 @@ func (p *Parser) ReadString() (ParsedExpr, error) {
 		}
 	}
 
-	return NewParsedCompleted(NewExprAtom(ReadString(res.String()))), nil
+	return NewParsedCompleted(NewExprAtom(NewAtomString(res.String()))), nil
 }
 
 // ReadKeyword reads a keyword token prefixed with a colon.
@@ -446,7 +443,7 @@ func (p *Parser) ReadKeyword() (ParsedExpr, error) {
 		return NewParsedIncomplete(NewStatusInReadKeyword(scanned, nil)), nil
 	}
 
-	return NewParsedCompleted(NewExprAtom(ReadKeyword(tok))), nil
+	return NewParsedCompleted(NewExprAtom(NewAtomKeyword(tok))), nil
 }
 
 // ReadComment reads a comment line prefixed with a semicolon.

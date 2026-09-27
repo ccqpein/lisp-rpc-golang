@@ -21,19 +21,11 @@ type Server struct {
 	mu       sync.RWMutex
 }
 
-// RPCServer is an alias for Server, matching the Rust naming convention.
-type RPCServer = Server
-
 // New creates a new empty Server instance.
 func New() *Server {
 	return &Server{
 		handlers: make(map[string]HandlerFunc),
 	}
-}
-
-// NewRPCServer creates a new empty Server instance (alias for New).
-func NewRPCServer() *Server {
-	return New()
 }
 
 // ExtractCommandName extracts the RPC command symbol name from a raw S-expression string.

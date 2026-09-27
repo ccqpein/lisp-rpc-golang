@@ -47,28 +47,28 @@ Schema parser and code generator transforming =.lisprpc= specification files int
 
 * Rust to Go Mapping Reference
 
-| Rust (=lisp-rpc= crates) | Go (=lisp-rpc-golang=)         | Description                                                                              |
-|------------------------+------------------------------+------------------------------------------------------------------------------------------|
-| ~ParserError~            | ~ParserError~, ~ParserErrorKind~ | Error enum and types (~ErrInvalidStart~, ~ErrInvalidToken~, ~ErrCorruptData~, ~ErrUnknownToken~) |
-| ~TypeValueNumber~        | ~TypeValueNumber~              | Numeric representation with ~Kind~ (~NumberInt~, ~NumberFloat~), ~ToInt()~, ~ToFloat()~, ~Add()~     |
-| ~TypeValue~              | ~TypeValue~                    | Typed atom value: ~Symbol~, ~String~, ~Keyword~, ~Number~                                        |
-| ~Atom~                   | ~Atom~                         | Atomic token: ~Read()~, ~ReadString()~, ~ReadKeyword()~, ~ReadNumber()~                          |
-| ~Expr~                   | ~Expr~                         | AST node: ~ExprAtom~, ~ExprList~, ~ExprQuote~, ~ExprComment~, with ~.String()~, ~.FilterOutComments~ |
-| ~ParsingStatus~          | ~ParsingStatus~                | Parser state machine: ~Clean~, ~InReadExpr~, ~InReadString~, ~InReadQuote~, ~InReadKeyword~, etc.  |
-| ~StreamParser<S>~        | ~StreamParser~                 | Streaming parser wrapping ~io.Reader~ with ~.Next()~, ~.All()~, and ~.Iter()~                    |
-| ~Data~                   | ~Data~                         | Root dynamic data sum type with ~Get()~, ~GetString()~, ~ToInt()~, ~ToFloat()~                   |
-| ~ExprData~               | ~ExprData~                     | Named S-expression data structure: ~(name :k1 v1 :k2 v2)~                                  |
-| ~ListData~               | ~ListData~                     | Quoted sequence data: ~'("a" "b" 1)~                                                       |
-| ~MapData~                | ~MapData~                      | Quoted key-value map: ~'(:k1 v1 :k2 v2)~                                                   |
-| ~RawDataGenerator<S>~    | ~RawDataGenerator~             | Streaming dynamic data adapter wrapping ~StreamParser~                                     |
-| ~DataFile~               | ~DataFile~                     | Parses and indexes multiple S-expression data records from file                          |
-| ~RPCType~                | ~RPCType~                      | Classification of RPC commands and messages (~RPC~, ~Msg~, ~Map~, ~List~, ~V~)                     |
-| ~ToRPCType~              | ~ToRPCType~                    | Interface defining RPC classification for types                                          |
-| ~RPCServer~              | ~Server~, ~RPCServer~            | Dispatch server with ~.Register()~, ~.Handle()~, ~.HandleContext()~, ~.ServeHTTP()~               |
-| ~DefPkg~                 | ~DefPkg~                       | Parses ~(def-rpc-package name)~ and generates ~go.mod~                                   |
-| ~DefMsg~                 | ~DefMsg~                       | Parses ~(def-msg name :key type ...)~ and generates structs with ~ToRPCType~            |
-| ~DefRPC~                 | ~DefRPC~                       | Parses ~(def-rpc name '(:key type ...) 'return)~ and generates RPC request/response structs |
-| ~SpecFile~               | ~SpecFile~                     | Multi-spec file parser and project generator (~GenCode~, ~GenCodeString~)                |
+| Rust (=lisp-rpc= crates) | Go (=lisp-rpc-golang=)         | Description                                                                                |
+|------------------------+------------------------------+--------------------------------------------------------------------------------------------|
+| ~ParserError~            | ~ParserError~, ~ParserErrorKind~ | Error enum and types (~ErrInvalidStart~, ~ErrInvalidToken~, ~ErrCorruptData~, ~ErrUnknownToken~)   |
+| ~TypeValueNumber~        | ~TypeValueNumber~              | Numeric representation with ~Kind~ (~NumberInt~, ~NumberFloat~), ~ToInt()~, ~ToFloat()~              |
+| ~TypeValue~              | ~TypeValue~                    | Typed atom value: ~Symbol~, ~String~, ~Keyword~, ~Number~                                          |
+| ~Atom~                   | ~Atom~                         | Atomic token: ~NewAtomSymbol()~, ~NewAtomString()~, ~NewAtomKeyword()~, ~NewAtomNumber()~          |
+| ~Expr~                   | ~Expr~                         | AST node: ~ExprAtom~, ~ExprList~, ~ExprQuote~, ~ExprComment~, with ~.String()~, ~.FilterOutComments~   |
+| ~ParsingStatus~          | ~ParsingStatus~                | Parser state machine: ~Clean~, ~InReadExpr~, ~InReadString~, ~InReadQuote~, ~InReadKeyword~, etc.    |
+| ~StreamParser<S>~        | ~StreamParser~                 | Streaming parser wrapping ~io.Reader~ with ~.Next()~, ~.All()~, and ~.Iter()~                      |
+| ~Data~                   | ~Data~                         | Root dynamic data sum type with ~Get()~, ~GetString()~, ~ToInt()~, ~ToFloat()~                     |
+| ~ExprData~               | ~ExprData~                     | Named S-expression data structure: ~(name :k1 v1 :k2 v2)~                                    |
+| ~ListData~               | ~ListData~                     | Quoted sequence data: ~'("a" "b" 1)~                                                         |
+| ~MapData~                | ~MapData~                      | Quoted key-value map: ~'(:k1 v1 :k2 v2)~                                                     |
+| ~RawDataGenerator<S>~    | ~RawDataGenerator~             | Streaming dynamic data adapter wrapping ~StreamParser~                                       |
+| ~DataFile~               | ~DataFile~                     | Parses and indexes multiple S-expression data records from file                            |
+| ~RPCType~                | ~RPCType~                      | Classification of RPC commands and messages (~RPC~, ~Msg~, ~Map~, ~List~, ~V~)                       |
+| ~ToRPCType~              | ~ToRPCType~                    | Interface defining RPC classification for types                                            |
+| ~RPCServer~              | ~Server~                       | Dispatch server (~server.New()~) with ~.Register()~, ~.Handle()~, ~.HandleContext()~, ~.ServeHTTP()~ |
+| ~DefPkg~                 | ~DefPkg~                       | Parses ~(def-rpc-package name)~ and generates ~go.mod~                                         |
+| ~DefMsg~                 | ~DefMsg~                       | Parses ~(def-msg name :key type ...)~ and generates structs with ~ToRPCType~                   |
+| ~DefRPC~                 | ~DefRPC~                       | Parses ~(def-rpc name '(:key type ...) 'return)~ and generates RPC request/response structs  |
+| ~SpecFile~               | ~SpecFile~                     | Multi-spec file parser and project generator (~GenCode~, ~GenCodeString~)                      |
 
 
 * Usage Examples
@@ -219,5 +219,3 @@ Working, runnable examples are provided in the =examples/= folder:
 2. [[file:examples/server-with-custom-structure/][examples/server-with-custom-structure]]: Typed Go struct models, handler registration, and HTTP integration.
 3. [[file:examples/plain-mode-read-and-write-data/][examples/plain-mode-read-and-write-data]]: Dynamic ~rawdata.Data~ creation, serialization, and parsing.
 4. [[file:examples/streaming-raw-data/][examples/streaming-raw-data]]: Streaming raw S-expressions over chunked streams with ~RawDataGenerator~.
-
-

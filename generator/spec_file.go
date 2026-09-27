@@ -12,7 +12,9 @@ import (
 
 // SpecFile represents a parsed .lisprpc specification file containing declarations.
 type SpecFile struct {
-	specs         []RPCSpec
+	Pkg           *DefPkg
+	Msgs          []*DefMsg
+	RPCs          []*DefRPC
 	symTable      map[string]bool
 	targetPkgName string
 }
@@ -24,14 +26,35 @@ func NewSpecFile() *SpecFile {
 	}
 }
 
-// RecordOne registers a parsed specification item, checking for duplicate symbol names.
-func (sf *SpecFile) RecordOne(spec RPCSpec) error {
-	sym := spec.SymbolName()
+// AddPkg registers the package declaration.
+func (sf *SpecFile) AddPkg(pkg *DefPkg) error {
+	if sf.Pkg != nil {
+		return fmt.Errorf("package already defined: %s", sf.Pkg.PkgName)
+	}
+	sf.Pkg = pkg
+	sf.targetPkgName = pkg.PkgName
+	return nil
+}
+
+// AddMsg registers a parsed message specification, checking for duplicate symbol names.
+func (sf *SpecFile) AddMsg(msg *DefMsg) error {
+	sym := msg.SymbolName()
 	if sf.symTable[sym] {
 		return fmt.Errorf("sym %s already have", sym)
 	}
 	sf.symTable[sym] = true
-	sf.specs = append(sf.specs, spec)
+	sf.Msgs = append(sf.Msgs, msg)
+	return nil
+}
+
+// AddRPC registers a parsed RPC specification, checking for duplicate symbol names.
+func (sf *SpecFile) AddRPC(rpc *DefRPC) error {
+	sym := rpc.SymbolName()
+	if sf.symTable[sym] {
+		return fmt.Errorf("sym %s already have", sym)
+	}
+	sf.symTable[sym] = true
+	sf.RPCs = append(sf.RPCs, rpc)
 	return nil
 }
 
@@ -67,7 +90,7 @@ func ParseSpecFile(r io.Reader) (*SpecFile, error) {
 			if err != nil {
 				return nil, err
 			}
-			if err := sf.RecordOne(rpcSpec); err != nil {
+			if err := sf.AddRPC(rpcSpec); err != nil {
 				return nil, err
 			}
 		} else if IfDefMsgExpr(expr) {
@@ -75,7 +98,7 @@ func ParseSpecFile(r io.Reader) (*SpecFile, error) {
 			if err != nil {
 				return nil, err
 			}
-			if err := sf.RecordOne(msgSpec); err != nil {
+			if err := sf.AddMsg(msgSpec); err != nil {
 				return nil, err
 			}
 		} else if IfDefPkgExpr(expr) {
@@ -83,8 +106,7 @@ func ParseSpecFile(r io.Reader) (*SpecFile, error) {
 			if err != nil {
 				return nil, err
 			}
-			sf.SetTargetPkgName(pkgSpec.PkgName)
-			if err := sf.RecordOne(pkgSpec); err != nil {
+			if err := sf.AddPkg(pkgSpec); err != nil {
 				return nil, err
 			}
 		} else {
@@ -109,49 +131,63 @@ func (sf *SpecFile) GenCodeString() (map[string]string, error) {
 		pkgName = "rpc"
 	}
 
-	var modContent string
-	var libBlocks []string
-
 	header, err := RenderTemplate(DefaultHeaderTemplate(), map[string]any{
 		"PackageName": pkgName,
 	})
 	if err != nil {
 		return nil, err
 	}
+
+	var libBlocks []string
 	libBlocks = append(libBlocks, header)
 
-	for _, spec := range sf.specs {
-		switch spec.TargetFile() {
-		case TargetFilePackage:
-			if dp, ok := spec.(*DefPkg); ok {
-				c, err := dp.GenCode()
-				if err != nil {
-					return nil, err
-				}
-				modContent = c
-			}
-		case TargetFileLib:
-			structs, err := spec.GenerateStructs()
+	for _, msg := range sf.Msgs {
+		structs, err := msg.GenerateStructs()
+		if err != nil {
+			return nil, err
+		}
+		for _, s := range structs {
+			sCode, err := RenderTemplate(DefaultStructTemplate(), s)
 			if err != nil {
 				return nil, err
 			}
-			for _, s := range structs {
-				sCode, err := RenderTemplate(DefaultStructTemplate(), s)
-				if err != nil {
-					return nil, err
-				}
-				implCode, err := RenderTemplate(DefaultRPCImplTemplate(), s)
-				if err != nil {
-					return nil, err
-				}
-				libBlocks = append(libBlocks, sCode+"\n\n"+implCode)
+			implCode, err := RenderTemplate(DefaultRPCImplTemplate(), s)
+			if err != nil {
+				return nil, err
 			}
+			libBlocks = append(libBlocks, sCode+"\n\n"+implCode)
+		}
+	}
+
+	for _, rpc := range sf.RPCs {
+		structs, err := rpc.GenerateStructs()
+		if err != nil {
+			return nil, err
+		}
+		for _, s := range structs {
+			sCode, err := RenderTemplate(DefaultStructTemplate(), s)
+			if err != nil {
+				return nil, err
+			}
+			implCode, err := RenderTemplate(DefaultRPCImplTemplate(), s)
+			if err != nil {
+				return nil, err
+			}
+			libBlocks = append(libBlocks, sCode+"\n\n"+implCode)
 		}
 	}
 
 	files["rpc_libs.go"] = strings.Join(libBlocks, "\n\n") + "\n"
 
-	if modContent == "" {
+	var modContent string
+	if sf.Pkg != nil {
+		c, err := sf.Pkg.GenCode()
+		if err != nil {
+			return nil, err
+		}
+		modContent = c
+	} else {
+		var err error
 		modContent, err = RenderTemplate(DefaultPackageTemplate(), &DefPkg{PkgName: pkgName})
 		if err != nil {
 			return nil, err

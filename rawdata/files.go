@@ -58,10 +58,3 @@ func (df *DataFile) GenTable() map[string]*ExprData {
 	return table
 }
 
-// Iter returns a slice of all ExprData records in this file.
-func (df *DataFile) Iter() []ExprData {
-	if df == nil {
-		return nil
-	}
-	return df.Datas
-}

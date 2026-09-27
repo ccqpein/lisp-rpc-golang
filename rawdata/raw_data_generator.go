@@ -72,7 +72,3 @@ func (g *RawDataGenerator) Iter() iter.Seq2[Data, error] {
 	}
 }
 
-// SizeHint returns the lower and upper bounds of stream size, matching Rust Stream::size_hint.
-func (g *RawDataGenerator) SizeHint() (int, *int) {
-	return 0, nil
-}

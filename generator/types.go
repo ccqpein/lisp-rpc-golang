@@ -35,16 +35,6 @@ func (t RPCDataType) String() string {
 	}
 }
 
-// TargetFileType categorizes the output destination file for a generated spec item.
-type TargetFileType int
-
-const (
-	// TargetFileLib indicates generated Go library code (e.g., rpc_libs.go).
-	TargetFileLib TargetFileType = iota
-	// TargetFilePackage indicates package configuration code (e.g., go.mod).
-	TargetFilePackage
-)
-
 // ReservedWords lists Go language keywords that cannot be used as struct field names.
 var ReservedWords = map[string]bool{
 	"break":       true,
@@ -209,11 +199,4 @@ func TypeTranslate(sym string) string {
 	}
 
 	return KebabToPascalCase(sym)
-}
-
-// RPCSpec is the common interface implemented by parsed RPC specification items.
-type RPCSpec interface {
-	SymbolName() string
-	TargetFile() TargetFileType
-	GenerateStructs() ([]*GeneratedStruct, error)
 }

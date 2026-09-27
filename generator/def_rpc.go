@@ -208,11 +208,6 @@ func (dr *DefRPC) SymbolName() string {
 	return dr.RPCName
 }
 
-// TargetFile indicates this spec item generates library code.
-func (dr *DefRPC) TargetFile() TargetFileType {
-	return TargetFileLib
-}
-
 // GenerateStructs transforms this RPC command into generated struct representations.
 func (dr *DefRPC) GenerateStructs() ([]*GeneratedStruct, error) {
 	return dr.CreateGenStructs()

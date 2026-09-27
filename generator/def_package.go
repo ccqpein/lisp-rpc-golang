@@ -74,13 +74,3 @@ func (dp *DefPkg) GenCode() (string, error) {
 func (dp *DefPkg) SymbolName() string {
 	return dp.PkgName
 }
-
-// TargetFile indicates that DefPkg targets package configuration (go.mod).
-func (dp *DefPkg) TargetFile() TargetFileType {
-	return TargetFilePackage
-}
-
-// GenerateStructs returns nil because DefPkg does not produce structs.
-func (dp *DefPkg) GenerateStructs() ([]*GeneratedStruct, error) {
-	return nil, nil
-}

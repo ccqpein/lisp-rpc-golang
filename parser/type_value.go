@@ -74,20 +74,6 @@ func (n TypeValueNumber) String() string {
 	return strconv.FormatFloat(n.Float, 'g', -1, 64)
 }
 
-// Add implements numeric addition between TypeValueNumbers, promoting to float if either is a float.
-func (n TypeValueNumber) Add(rhs TypeValueNumber) TypeValueNumber {
-	switch {
-	case n.Kind == NumberInt && rhs.Kind == NumberInt:
-		return NewInt(n.Int + rhs.Int)
-	case n.Kind == NumberFloat && rhs.Kind == NumberInt:
-		return NewFloat(n.Float + float64(rhs.Int))
-	case n.Kind == NumberInt && rhs.Kind == NumberFloat:
-		return NewFloat(float64(n.Int) + rhs.Float)
-	default:
-		return NewFloat(n.Float + rhs.Float)
-	}
-}
-
 // TypeValueKind represents the kind of primitive atom value.
 type TypeValueKind int
 

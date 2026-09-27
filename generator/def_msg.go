@@ -212,11 +212,6 @@ func (dm *DefMsg) SymbolName() string {
 	return dm.MsgName
 }
 
-// TargetFile indicates this spec item generates library code.
-func (dm *DefMsg) TargetFile() TargetFileType {
-	return TargetFileLib
-}
-
 // GenerateStructs transforms this message into generated struct representations.
 func (dm *DefMsg) GenerateStructs() ([]*GeneratedStruct, error) {
 	return dm.CreateGenStructs()

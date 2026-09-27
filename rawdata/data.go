@@ -19,8 +19,6 @@ const (
 	DataMapKind
 	// DataValueKind represents a primitive atom value (symbol, string, keyword, or number).
 	DataValueKind
-	// DataErrorKind represents an error encountered during dynamic data operations.
-	DataErrorKind
 )
 
 // Data represents dynamic Lisp-RPC data: named expressions, lists, maps, or primitive values.
@@ -30,7 +28,6 @@ type Data struct {
 	list   *ListData
 	mapVal *MapData
 	value  *parser.TypeValue
-	err    error
 }
 
 // NewDataExpr creates a Data wrapping an ExprData.
@@ -51,11 +48,6 @@ func NewDataMap(md *MapData) Data {
 // NewDataValue creates a Data wrapping a parser.TypeValue.
 func NewDataValue(tv parser.TypeValue) Data {
 	return Data{Kind: DataValueKind, value: &tv}
-}
-
-// NewDataError creates a Data wrapping an error.
-func NewDataErrorData(err error) Data {
-	return Data{Kind: DataErrorKind, err: err}
 }
 
 // NewDataString creates a Data value containing a string literal.
@@ -103,11 +95,6 @@ func (d Data) IsValue() bool {
 	return d.Kind == DataValueKind
 }
 
-// IsError returns true if this is an error data element.
-func (d Data) IsError() bool {
-	return d.Kind == DataErrorKind
-}
-
 // Expr returns the inner ExprData pointer if this is a DataExprKind, or nil otherwise.
 func (d Data) Expr() *ExprData {
 	return d.expr
@@ -126,11 +113,6 @@ func (d Data) Map() *MapData {
 // Value returns the inner TypeValue pointer if this is a DataValueKind, or nil otherwise.
 func (d Data) Value() *parser.TypeValue {
 	return d.value
-}
-
-// Error returns the inner error if this is a DataErrorKind, or nil otherwise.
-func (d Data) Error() error {
-	return d.err
 }
 
 // AsValue returns the inner TypeValue and true if this is a DataValueKind.
@@ -199,10 +181,6 @@ func (d Data) String() string {
 		if d.value != nil {
 			return d.value.String()
 		}
-	case DataErrorKind:
-		if d.err != nil {
-			return d.err.Error()
-		}
 	}
 	return ""
 }
@@ -245,14 +223,6 @@ func (d Data) Equal(other Data) bool {
 			return false
 		}
 		return d.value.Equal(*other.value)
-	case DataErrorKind:
-		if d.err == nil && other.err == nil {
-			return true
-		}
-		if d.err == nil || other.err == nil {
-			return false
-		}
-		return d.err.Error() == other.err.Error()
 	default:
 		return false
 	}
@@ -412,31 +382,6 @@ func NewPair(k string, v any) Pair {
 	return Pair{Key: k, Val: v}
 }
 
-// IntoData is an interface for types that can convert themselves into Data.
-type IntoData interface {
-	IntoRPCData() Data
-}
-
-// IntoRPCData implements IntoData for Data.
-func (d Data) IntoRPCData() Data {
-	return d
-}
-
-// IntoRPCData implements IntoData for ExprData.
-func (ed ExprData) IntoRPCData() Data {
-	return NewDataExpr(&ed)
-}
-
-// IntoRPCData implements IntoData for ListData.
-func (ld ListData) IntoRPCData() Data {
-	return NewDataList(&ld)
-}
-
-// IntoRPCData implements IntoData for MapData.
-func (md MapData) IntoRPCData() Data {
-	return NewDataMap(&md)
-}
-
 // ToData converts a Go value into a Data representation.
 func ToData(v any) (Data, error) {
 	if v == nil {
@@ -485,8 +430,6 @@ func ToData(v any) (Data, error) {
 			return NewDataSymbol("T"), nil
 		}
 		return NewDataSymbol("NIL"), nil
-	case IntoData:
-		return val.IntoRPCData(), nil
 	default:
 		return Data{}, NewDataError(fmt.Sprintf("cannot convert %T to Data", v), ErrInvalidInput)
 	}
