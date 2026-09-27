@@ -27,9 +27,9 @@ Dynamic, schema-free S-expression parsing and manipulation for Plain Mode:
 ** =server= (=github.com/ccqpein/lisp-rpc-golang/server=)
 
 Server dispatch engine and RPC handler registration:
-- Synchronous and asynchronous handler registration (~Register~, ~RegisterAsync~).
+- Native concurrent handler registration (~Register~, ~RegisterNamed~).
 - Automatic struct serialization/deserialization between Go types and Lisp S-expressions using ~lisp-rpc:"..."~ tags.
-- Support for ~context.Context~ in handler functions.
+- Full support for ~context.Context~ in handler functions.
 - Native ~net/http.Handler~ implementation for standard Go HTTP servers and ~httptest~.
 - Command routing matching Rust Lisp-RPC dispatch semantics.
 
@@ -64,7 +64,7 @@ Schema parser and code generator transforming =.lisprpc= specification files int
 | ~DataFile~               | ~DataFile~                     | Parses and indexes multiple S-expression data records from file                          |
 | ~RPCType~                | ~RPCType~                      | Classification of RPC commands and messages (~RPC~, ~Msg~, ~Map~, ~List~, ~V~)                     |
 | ~ToRPCType~              | ~ToRPCType~                    | Interface defining RPC classification for types                                          |
-| ~RPCServer~              | ~Server~, ~RPCServer~            | Dispatch server with ~.Register()~, ~.RegisterAsync()~, ~.Handle()~, ~.ServeHTTP()~              |
+| ~RPCServer~              | ~Server~, ~RPCServer~            | Dispatch server with ~.Register()~, ~.Handle()~, ~.HandleContext()~, ~.ServeHTTP()~               |
 | ~DefPkg~                 | ~DefPkg~                       | Parses ~(def-rpc-package name)~ and generates ~go.mod~                                   |
 | ~DefMsg~                 | ~DefMsg~                       | Parses ~(def-msg name :key type ...)~ and generates structs with ~ToRPCType~            |
 | ~DefRPC~                 | ~DefRPC~                       | Parses ~(def-rpc name '(:key type ...) 'return)~ and generates RPC request/response structs |

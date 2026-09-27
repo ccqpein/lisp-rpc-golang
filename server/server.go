@@ -59,20 +59,11 @@ func (s *Server) Register(fn any) (*Server, error) {
 	return s.registerInternal("", fn)
 }
 
-// RegisterAsync is an alias for Register in Go, where all handlers support concurrency natively.
-func (s *Server) RegisterAsync(fn any) (*Server, error) {
-	return s.Register(fn)
-}
-
 // RegisterNamed registers an RPC handler function with an explicit command name.
 func (s *Server) RegisterNamed(name string, fn any) (*Server, error) {
 	return s.registerInternal(name, fn)
 }
 
-// RegisterNamedAsync is an alias for RegisterNamed.
-func (s *Server) RegisterNamedAsync(name string, fn any) (*Server, error) {
-	return s.RegisterNamed(name, fn)
-}
 
 func (s *Server) registerInternal(explicitName string, fn any) (*Server, error) {
 	fnVal := reflect.ValueOf(fn)
@@ -205,15 +196,6 @@ func (s *Server) HandleContext(ctx context.Context, rawData string) (string, err
 	return handler(ctx, rawData)
 }
 
-// HandleAsync dispatches a raw S-expression string. In Go, it is an alias for Handle.
-func (s *Server) HandleAsync(rawData string) (string, error) {
-	return s.HandleContext(context.Background(), rawData)
-}
-
-// HandleAsyncContext dispatches a raw S-expression string with context. In Go, it is an alias for HandleContext.
-func (s *Server) HandleAsyncContext(ctx context.Context, rawData string) (string, error) {
-	return s.HandleContext(ctx, rawData)
-}
 
 // ServeHTTP implements net/http.Handler for native Go HTTP server integration.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
