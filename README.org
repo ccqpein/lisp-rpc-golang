@@ -28,10 +28,22 @@ Dynamic, schema-free S-expression parsing and manipulation for Plain Mode:
 
 Server dispatch engine and RPC handler registration:
 - Synchronous and asynchronous handler registration (~Register~, ~RegisterAsync~).
-- Automatic struct serialization/deserialization between Go types and Lisp S-expressions.
+- Automatic struct serialization/deserialization between Go types and Lisp S-expressions using ~lisp-rpc:"..."~ tags.
 - Support for ~context.Context~ in handler functions.
 - Native ~net/http.Handler~ implementation for standard Go HTTP servers and ~httptest~.
 - Command routing matching Rust Lisp-RPC dispatch semantics.
+
+** =generator= (=github.com/ccqpein/lisp-rpc-golang/generator=)
+
+Schema parser and code generator transforming =.lisprpc= specification files into typed Go libraries:
+- Parses ~(def-rpc-package name)~, ~(def-msg name :key type ...)~, and ~(def-rpc name '(:key type ...) 'return-type)~.
+- Handles nested anonymous maps, list sequences ~(list 'type)~, and optional values ~(optional 'type)~.
+- Generates idiomatic Go structs with exported ~PascalCase~ field names and ~lisp-rpc:"kebab-case"~ tags.
+- Implements ~ToRPCType() server.RPCType~ methods and RPC ~ReturnType()~ method links.
+- Sub-maps self-describe via ~RPCTypeMap~ with zero global state.
+- Provides the ~lisp-rpc-golang-generator~ CLI tool (=github.com/ccqpein/lisp-rpc-golang/cmd/lisp-rpc-golang-generator=).
+
+
 
 * Rust to Go Mapping Reference
 
@@ -53,6 +65,11 @@ Server dispatch engine and RPC handler registration:
 | ~RPCType~                | ~RPCType~                      | Classification of RPC commands and messages (~RPC~, ~Msg~, ~Map~, ~List~, ~V~)                     |
 | ~ToRPCType~              | ~ToRPCType~                    | Interface defining RPC classification for types                                          |
 | ~RPCServer~              | ~Server~, ~RPCServer~            | Dispatch server with ~.Register()~, ~.RegisterAsync()~, ~.Handle()~, ~.ServeHTTP()~              |
+| ~DefPkg~                 | ~DefPkg~                       | Parses ~(def-rpc-package name)~ and generates ~go.mod~                                   |
+| ~DefMsg~                 | ~DefMsg~                       | Parses ~(def-msg name :key type ...)~ and generates structs with ~ToRPCType~            |
+| ~DefRPC~                 | ~DefRPC~                       | Parses ~(def-rpc name '(:key type ...) 'return)~ and generates RPC request/response structs |
+| ~SpecFile~               | ~SpecFile~                     | Multi-spec file parser and project generator (~GenCode~, ~GenCodeString~)                |
+
 
 * Usage Examples
 

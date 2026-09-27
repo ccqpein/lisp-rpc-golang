@@ -111,7 +111,6 @@ func (sf *SpecFile) GenCodeString() (map[string]string, error) {
 
 	var modContent string
 	var libBlocks []string
-	var mapTypes []string
 
 	header, err := RenderTemplate(DefaultHeaderTemplate(), map[string]any{
 		"PackageName": pkgName,
@@ -146,20 +145,9 @@ func (sf *SpecFile) GenCodeString() (map[string]string, error) {
 					return nil, err
 				}
 				libBlocks = append(libBlocks, sCode+"\n\n"+implCode)
-				if s.RPCType == RPCDataTypeMap {
-					mapTypes = append(mapTypes, s.Name)
-				}
 			}
 		}
 	}
-
-	initFunc, err := RenderTemplate(DefaultInitTemplate(), map[string]any{
-		"MapTypes": mapTypes,
-	})
-	if err != nil {
-		return nil, err
-	}
-	libBlocks = append(libBlocks, initFunc)
 
 	files["rpc_libs.go"] = strings.Join(libBlocks, "\n\n") + "\n"
 

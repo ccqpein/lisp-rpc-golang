@@ -6,41 +6,13 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"sync"
 	"unicode"
 
 	"github.com/ccqpein/lisp-rpc-golang/rawdata"
 )
 
-var (
-	globalMapTypesMu sync.RWMutex
-	globalMapTypes   = make(map[string]bool)
-)
-
-// RegisterGlobalMapType registers a struct type name globally to be serialized as an anonymous map '(:key val).
-func RegisterGlobalMapType(name string) {
-	globalMapTypesMu.Lock()
-	defer globalMapTypesMu.Unlock()
-	globalMapTypes[name] = true
-	globalMapTypes[toKebabCase(name)] = true
-}
-
-// ClearGlobalMapTypes clears all globally registered map types.
-func ClearGlobalMapTypes() {
-	globalMapTypesMu.Lock()
-	defer globalMapTypesMu.Unlock()
-	globalMapTypes = make(map[string]bool)
-}
-
-// IsGlobalMapType returns whether the given struct type name is registered as a map type.
-func IsGlobalMapType(name string) bool {
-	globalMapTypesMu.RLock()
-	defer globalMapTypesMu.RUnlock()
-	return globalMapTypes[name] || globalMapTypes[toKebabCase(name)]
-}
-
-
 // toKebabCase converts CamelCase or snake_case string identifiers into kebab-case.
+
 func toKebabCase(s string) string {
 	var b strings.Builder
 	runes := []rune(s)
@@ -132,11 +104,14 @@ func SerializeLisp(v any) (string, error) {
 		}
 
 		var structName string
-		isMap := IsGlobalMapType(typ.Name()) || IsGlobalMapType(structTypeName(typ))
+		isMap := false
 		if toRPC, ok := v.(ToRPCType); ok {
 			rpcType := toRPC.ToRPCType()
-			if rpcType.Kind == RPCTypeRPC || rpcType.Kind == RPCTypeMsg {
+			switch rpcType.Kind {
+			case RPCTypeRPC, RPCTypeMsg:
 				structName = rpcType.Name
+			case RPCTypeMap:
+				isMap = true
 			}
 		}
 		if structName == "" {
@@ -159,6 +134,9 @@ func SerializeLisp(v any) (string, error) {
 		}
 
 		if isMap {
+			if len(pairs) == 0 {
+				return "'()", nil
+			}
 			return "'(" + strings.Join(pairs, " ") + ")", nil
 		}
 

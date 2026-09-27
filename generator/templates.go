@@ -34,12 +34,6 @@ func ({{ .Name }}) ReturnType() {{ .ReturnType }} {
 }
 {{- end }}`
 
-const defaultInitTemplate = `func init() {
-{{- range .MapTypes }}
-	server.RegisterGlobalMapType("{{ . }}")
-{{- end }}
-}`
-
 const defaultPackageTemplate = `module {{ .PkgName }}
 
 go 1.22
@@ -60,11 +54,6 @@ func DefaultStructTemplate() string {
 // DefaultRPCImplTemplate returns the default template for generating ToRPCType and ReturnType methods.
 func DefaultRPCImplTemplate() string {
 	return defaultRPCImplTemplate
-}
-
-// DefaultInitTemplate returns the default template for generating the package init() function.
-func DefaultInitTemplate() string {
-	return defaultInitTemplate
 }
 
 // DefaultPackageTemplate returns the default template for generating go.mod.
