@@ -1,0 +1,12 @@
+* Plain Mode Read and Write Data Example
+
+This example demonstrates how to:
+1. Construct and serialize raw Lisp S-expression data structures (~rawdata.Data~) without static models.
+2. Parse raw S-expression strings with ~rawdata.DataFromRootStr~ and inspect fields dynamically.
+3. Construct dynamic response payloads and read results.
+
+** Run the Example
+
+#+begin_src shell
+  go run ./examples/plain-mode-read-and-write-data/main.go
+#+end_src

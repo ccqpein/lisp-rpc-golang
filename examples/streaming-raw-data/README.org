@@ -1,0 +1,12 @@
+* Streaming Raw Data Example
+
+This example demonstrates how to:
+1. Stream S-expressions in arbitrary chunk fragments across pipe or network boundaries without length prefixes or framing.
+2. Incrementally parse and yield fully-assembled ~rawdata.Data~ items via ~rawdata.RawDataGenerator~.
+3. Correctly handle multi-byte UTF-8 split across chunk boundaries.
+
+** Run the Example
+
+#+begin_src shell
+  go run ./examples/streaming-raw-data/main.go
+#+end_src

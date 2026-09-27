@@ -185,3 +185,39 @@ Schema parser and code generator transforming =.lisprpc= specification files int
   }
 #+end_src
 
+** 4. Spec-Mode Code Generation
+
+Given a specification file =spec.lisprpc=:
+
+#+begin_src lisp
+  (def-rpc-package demo)
+
+  (def-msg book-info
+    :title 'string
+    :authors (list 'string))
+
+  (def-rpc get-book
+      '(:title 'string)
+    'book-info)
+#+end_src
+
+Generate the typed Go library:
+
+#+begin_src shell
+  go run github.com/ccqpein/lisp-rpc-golang/cmd/lisp-rpc-golang-generator \
+      -input spec.lisprpc \
+      -output ./output
+#+end_src
+
+This outputs =./output/demo/go.mod= and =./output/demo/rpc_libs.go= ready for immediate use.
+
+* Examples Directory
+
+Working, runnable examples are provided in the =examples/= folder:
+
+1. [[file:examples/spec-mode-generate-lib/][examples/spec-mode-generate-lib]]: Schema file and CLI usage instructions.
+2. [[file:examples/server-with-custom-structure/][examples/server-with-custom-structure]]: Typed Go struct models, handler registration, and HTTP integration.
+3. [[file:examples/plain-mode-read-and-write-data/][examples/plain-mode-read-and-write-data]]: Dynamic ~rawdata.Data~ creation, serialization, and parsing.
+4. [[file:examples/streaming-raw-data/][examples/streaming-raw-data]]: Streaming raw S-expressions over chunked streams with ~RawDataGenerator~.
+
+

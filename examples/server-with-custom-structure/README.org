@@ -1,0 +1,13 @@
+* Server with Custom Structure Example
+
+This example demonstrates how to:
+1. Define custom Go request and response structs with ~lisp-rpc:"..."~ tags.
+2. Implement ~ToRPCType() server.RPCType~ on the request struct.
+3. Register the handler with ~server.New().Register(...)~.
+4. Mount the server as a native Go ~net/http.Handler~.
+
+** Run the Example
+
+#+begin_src shell
+  go run ./examples/server-with-custom-structure/main.go
+#+end_src
