@@ -24,10 +24,10 @@ func IfDefRPCExpr(expr *parser.Expr) bool {
 		return false
 	}
 	first := expr.List[0]
-	if first.Kind != parser.ExprAtom || first.Atom.Value.Kind != parser.TypeValueSymbol {
+	if first.Kind != parser.ExprAtom || first.Atom.Kind != parser.TypeValueSymbol {
 		return false
 	}
-	return first.Atom.Value.Str == "def-rpc"
+	return first.Atom.Str == "def-rpc"
 }
 
 // ParseDefRPCExpr parses a DefRPC from an Expr AST node.
@@ -41,10 +41,10 @@ func ParseDefRPCExpr(expr *parser.Expr) (*DefRPC, error) {
 	}
 
 	rpcNameAtom := expr.List[1]
-	if rpcNameAtom.Kind != parser.ExprAtom || rpcNameAtom.Atom.Value.Kind != parser.TypeValueSymbol {
+	if rpcNameAtom.Kind != parser.ExprAtom || rpcNameAtom.Atom.Kind != parser.TypeValueSymbol {
 		return nil, errors.New("parsing failed, rpc name should be symbol")
 	}
-	rpcName := rpcNameAtom.Atom.Value.Str
+	rpcName := rpcNameAtom.Atom.Str
 
 	rawArgs := deQuoted(&expr.List[2])
 	if rawArgs.Kind != parser.ExprList {
@@ -54,10 +54,10 @@ func ParseDefRPCExpr(expr *parser.Expr) (*DefRPC, error) {
 	var returnType string
 	if len(expr.List) > 3 {
 		rtExpr := deQuoted(&expr.List[3])
-		if rtExpr.Kind != parser.ExprAtom || rtExpr.Atom.Value.Kind != parser.TypeValueSymbol {
+		if rtExpr.Kind != parser.ExprAtom || rtExpr.Atom.Kind != parser.TypeValueSymbol {
 			return nil, errors.New("parsing failed, return type has to be quoted")
 		}
-		returnType = rtExpr.Atom.Value.Str
+		returnType = rtExpr.Atom.Str
 	}
 
 	return &DefRPC{
@@ -97,15 +97,15 @@ func (dr *DefRPC) CreateGenStructs() ([]*GeneratedStruct, error) {
 		k := &dr.Args[i]
 		v := &dr.Args[i+1]
 
-		if k.Kind != parser.ExprAtom || k.Atom.Value.Kind != parser.TypeValueKeyword {
+		if k.Kind != parser.ExprAtom || k.Atom.Kind != parser.TypeValueKeyword {
 			return nil, errors.New("create gen structs failed, arguments has to be the keywords-value pair")
 		}
-		f := k.Atom.Value.Str
+		f := k.Atom.Str
 
 		vUnquoted := deQuoted(v)
 
-		if vUnquoted.Kind == parser.ExprAtom && vUnquoted.Atom.Value.Kind == parser.TypeValueSymbol {
-			t := vUnquoted.Atom.Value.Str
+		if vUnquoted.Kind == parser.ExprAtom && vUnquoted.Atom.Kind == parser.TypeValueSymbol {
+			t := vUnquoted.Atom.Str
 			field, err := NewGeneratedField(f, TypeTranslate(t), "")
 			if err != nil {
 				return nil, err
@@ -119,7 +119,7 @@ func (dr *DefRPC) CreateGenStructs() ([]*GeneratedStruct, error) {
 
 			firstElem := &innerExprs[0]
 			if firstElem.Kind == parser.ExprAtom {
-				if firstElem.Atom.Value.Kind == parser.TypeValueKeyword {
+				if firstElem.Atom.Kind == parser.TypeValueKeyword {
 					// Anonymous map type: first element is a keyword
 					newMsgName := dr.RPCName + "-" + f
 					subMsg, err := NewDefMsg(newMsgName, innerExprs, RPCDataTypeMap)
@@ -140,13 +140,13 @@ func (dr *DefRPC) CreateGenStructs() ([]*GeneratedStruct, error) {
 					continue
 				}
 
-				if firstElem.Atom.Value.Kind == parser.TypeValueSymbol {
-					sym := firstElem.Atom.Value.Str
+				if firstElem.Atom.Kind == parser.TypeValueSymbol {
+					sym := firstElem.Atom.Str
 					secondElem := deQuoted(&innerExprs[1])
-					if secondElem.Kind != parser.ExprAtom || secondElem.Atom.Value.Kind != parser.TypeValueSymbol {
+					if secondElem.Kind != parser.ExprAtom || secondElem.Atom.Kind != parser.TypeValueSymbol {
 						return nil, errors.New("create gen structs failed, composite element type must be a symbol")
 					}
-					elemType := secondElem.Atom.Value.Str
+					elemType := secondElem.Atom.Str
 
 					if sym == "list" {
 						newTypeName := "[]" + TypeTranslate(elemType)

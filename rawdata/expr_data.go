@@ -61,18 +61,18 @@ func ExprDataFromExpr(expr *parser.Expr) (*ExprData, error) {
 		)
 	}
 
-	if exprs[0].Kind != parser.ExprAtom || exprs[0].Atom.Value.Kind != parser.TypeValueSymbol {
+	if exprs[0].Kind != parser.ExprAtom || exprs[0].Atom.Kind != parser.TypeValueSymbol {
 		return nil, NewDataError("data's first element has to be symbol", ErrInvalidInput)
 	}
 
-	name := exprs[0].Atom.Value.Str
+	name := exprs[0].Atom.Str
 	var restArgs []ExprArg
 
 	for i := 1; i < len(exprs); i += 2 {
 		k := exprs[i]
 		v := exprs[i+1]
 
-		if k.Kind != parser.ExprAtom || k.Atom.Value.Kind != parser.TypeValueKeyword {
+		if k.Kind != parser.ExprAtom || k.Atom.Kind != parser.TypeValueKeyword {
 			return nil, NewDataError("has to be keyword value pairs", ErrInvalidInput)
 		}
 
@@ -118,8 +118,8 @@ func (ed *ExprData) initInnerMap() {
 	ed.innerMap = make(map[string]*Data, len(ed.RestArgs))
 	for i := range ed.RestArgs {
 		arg := &ed.RestArgs[i]
-		if arg.Key.Kind == parser.ExprAtom && arg.Key.Atom.Value.Kind == parser.TypeValueKeyword {
-			ed.innerMap[arg.Key.Atom.Value.Str] = &arg.Val
+		if arg.Key.Kind == parser.ExprAtom && arg.Key.Atom.Kind == parser.TypeValueKeyword {
+			ed.innerMap[arg.Key.Atom.Str] = &arg.Val
 		}
 	}
 }

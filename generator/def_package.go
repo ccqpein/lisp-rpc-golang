@@ -22,10 +22,10 @@ func IfDefPkgExpr(expr *parser.Expr) bool {
 		return false
 	}
 	first := expr.List[0]
-	if first.Kind != parser.ExprAtom || first.Atom.Value.Kind != parser.TypeValueSymbol {
+	if first.Kind != parser.ExprAtom || first.Atom.Kind != parser.TypeValueSymbol {
 		return false
 	}
-	return first.Atom.Value.Str == "def-rpc-package"
+	return first.Atom.Str == "def-rpc-package"
 }
 
 // ParseDefPkgExpr parses a DefPkg from an Expr AST node.
@@ -39,12 +39,12 @@ func ParseDefPkgExpr(expr *parser.Expr) (*DefPkg, error) {
 	}
 
 	nameAtom := expr.List[1]
-	if nameAtom.Kind != parser.ExprAtom || nameAtom.Atom.Value.Kind != parser.TypeValueSymbol {
+	if nameAtom.Kind != parser.ExprAtom || nameAtom.Atom.Kind != parser.TypeValueSymbol {
 		return nil, errors.New("parsing failed, pkg name should be symbol")
 	}
 
 	return &DefPkg{
-		PkgName: nameAtom.Atom.Value.Str,
+		PkgName: nameAtom.Atom.Str,
 	}, nil
 }
 

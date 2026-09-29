@@ -139,6 +139,25 @@ func (tv TypeValue) GetString() (string, error) {
 	return "", fmt.Errorf("%v isn't the String type that can get string", tv)
 }
 
+// IsString returns true if the type value is a string literal.
+func (tv TypeValue) IsString() bool {
+	return tv.Kind == TypeValueString
+}
+
+// IsSymbol returns true if the type value is a symbol identifier.
+func (tv TypeValue) IsSymbol() bool {
+	return tv.Kind == TypeValueSymbol
+}
+
+// IsKeyword returns true if the type value is a keyword identifier.
+func (tv TypeValue) IsKeyword() bool {
+	return tv.Kind == TypeValueKeyword
+}
+
+// IsNumber returns true if the type value is a numeric literal.
+func (tv TypeValue) IsNumber() bool {
+	return tv.Kind == TypeValueNumberKind
+}
 // MakeSymbol creates a TypeValueSymbol if the string contains no whitespace.
 func MakeSymbol(s string) (TypeValue, error) {
 	if strings.Contains(s, " ") {

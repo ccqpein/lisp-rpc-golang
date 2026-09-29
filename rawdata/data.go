@@ -233,7 +233,7 @@ func IsNilSymbol(e *parser.Expr) bool {
 	if e == nil || e.Kind != parser.ExprAtom {
 		return false
 	}
-	if e.Atom.Value.Kind == parser.TypeValueSymbol && strings.EqualFold(e.Atom.Value.Str, "nil") {
+	if e.Atom.Kind == parser.TypeValueSymbol && strings.EqualFold(e.Atom.Str, "nil") {
 		return true
 	}
 	return false
@@ -244,7 +244,7 @@ func IsTSymbol(e *parser.Expr) bool {
 	if e == nil || e.Kind != parser.ExprAtom {
 		return false
 	}
-	if e.Atom.Value.Kind == parser.TypeValueSymbol && strings.EqualFold(e.Atom.Value.Str, "t") {
+	if e.Atom.Kind == parser.TypeValueSymbol && strings.EqualFold(e.Atom.Str, "t") {
 		return true
 	}
 	return false
@@ -283,7 +283,7 @@ func DataFromExpr(e *parser.Expr) (Data, error) {
 			}
 			switch exprs[0].Kind {
 			case parser.ExprAtom:
-				if exprs[0].Atom.Value.Kind == parser.TypeValueKeyword {
+				if exprs[0].Atom.Kind == parser.TypeValueKeyword {
 					md, err := MapDataFromExpr(e)
 					if err != nil {
 						return Data{}, err
@@ -305,19 +305,19 @@ func DataFromExpr(e *parser.Expr) (Data, error) {
 				return Data{}, NewDataError(fmt.Sprintf("cannot generate Data from the expr %v", e), ErrInvalidInput)
 			}
 		case parser.ExprAtom:
-			return NewDataValue(e.Quote.Atom.Value), nil
+			return NewDataValue(e.Quote.Atom), nil
 		default:
 			return Data{}, NewDataError(fmt.Sprintf("cannot generate Data from the expr %v", e), ErrInvalidInput)
 		}
 
 	case parser.ExprAtom:
-		if e.Atom.Value.Kind == parser.TypeValueSymbol {
-			if strings.EqualFold(e.Atom.Value.Str, "t") {
-				return NewDataValue(e.Atom.Value), nil
+		if e.Atom.Kind == parser.TypeValueSymbol {
+			if strings.EqualFold(e.Atom.Str, "t") {
+				return NewDataValue(e.Atom), nil
 			}
 			return Data{}, NewDataError(fmt.Sprintf("cannot generate Data from the symbol %v", e.Atom), ErrInvalidInput)
 		}
-		return NewDataValue(e.Atom.Value), nil
+		return NewDataValue(e.Atom), nil
 
 	case parser.ExprComment:
 		return Data{}, NewDataError("cannot generate Data from the comment", ErrInvalidInput)

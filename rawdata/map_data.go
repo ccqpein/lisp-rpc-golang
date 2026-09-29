@@ -9,14 +9,15 @@ import (
 // MapData represents a quoted key-value map data structure '(:k1 v1 :k2 v2).
 type MapData struct {
 	kwrds   []string
-	dataMap map[string]Data
+	dataMap map[string]*Data
 }
 
 // NewMapData creates a new MapData with the specified keyword order and map.
 func NewMapData(kwrds []string, m map[string]Data) *MapData {
-	table := make(map[string]Data, len(m))
+	table := make(map[string]*Data, len(m))
 	for k, v := range m {
-		table[k] = v
+		val := v
+		table[k] = &val
 	}
 	return &MapData{
 		kwrds:   append([]string(nil), kwrds...),
@@ -44,24 +45,24 @@ func MapDataFromExpr(expr *parser.Expr) (*MapData, error) {
 	}
 
 	var kwrds []string
-	table := make(map[string]Data, len(rawItems)/2)
+	table := make(map[string]*Data, len(rawItems)/2)
 
 	for i := 0; i < len(rawItems); i += 2 {
 		k := rawItems[i]
 		v := rawItems[i+1]
 
-		if k.Kind != parser.ExprAtom || k.Atom.Value.Kind != parser.TypeValueKeyword {
+		if k.Kind != parser.ExprAtom || k.Atom.Kind != parser.TypeValueKeyword {
 			return nil, NewDataError("MapData has to be keyword pairs like '(:a 1 :b 2)", ErrInvalidInput)
 		}
 
-		keyStr := k.Atom.Value.Str
+		keyStr := k.Atom.Str
 		if !IsNilSymbol(&v) {
 			valData, err := DataFromExpr(&v)
 			if err != nil {
 				return nil, err
 			}
 			kwrds = append(kwrds, keyStr)
-			table[keyStr] = valData
+			table[keyStr] = &valData
 		}
 	}
 
@@ -94,10 +95,7 @@ func (m *MapData) Get(k string) *Data {
 	if m == nil || m.dataMap == nil {
 		return nil
 	}
-	if val, ok := m.dataMap[k]; ok {
-		return &val
-	}
-	return nil
+	return m.dataMap[k]
 }
 
 // Len returns the number of key-value pairs in the map.
@@ -124,7 +122,7 @@ func (m *MapData) String() string {
 	parts := make([]string, 0, len(m.kwrds)*2)
 	for _, k := range m.kwrds {
 		parts = append(parts, ":"+k)
-		if val, ok := m.dataMap[k]; ok {
+		if val, ok := m.dataMap[k]; ok && val != nil {
 			parts = append(parts, val.String())
 		} else {
 			parts = append(parts, "corrupted data")
@@ -143,7 +141,13 @@ func (m *MapData) Equal(other MapData) bool {
 	}
 	for k, v := range m.dataMap {
 		otherV, ok := other.dataMap[k]
-		if !ok || !v.Equal(otherV) {
+		if !ok {
+			return false
+		}
+		if v == nil && otherV == nil {
+			continue
+		}
+		if v == nil || otherV == nil || !v.Equal(*otherV) {
 			return false
 		}
 	}
