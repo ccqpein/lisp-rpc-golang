@@ -7,12 +7,18 @@ The schema file is [[file:spec.lisprpc][spec.lisprpc]].
 ** Running the Generator CLI
 
 #+begin_src shell
-  # Build or run directly via go run:
+  # Generate data structures only (default):
   go run github.com/ccqpein/lisp-rpc-golang/cmd/lisp-rpc-golang-generator \
       -input spec.lisprpc \
       -output ./output
+
+  # Generate data structures and implement server RPC traits:
+  go run github.com/ccqpein/lisp-rpc-golang/cmd/lisp-rpc-golang-generator \
+      -input spec.lisprpc \
+      -output ./output \
+      --with-server
 #+end_src
 
 This generates a Go package under =./output/demo/= containing:
 - =go.mod= (Go module definition)
-- =rpc_libs.go= (Typed structs, ~ToRPCType~ methods, ~ReturnType~ methods, and map registration in ~init()~)
+- =rpc_libs.go= (Typed structs, comments, and optional ~ToRPCType~ / ~ReturnType~ methods)

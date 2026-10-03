@@ -8,21 +8,32 @@ import (
 	"github.com/ccqpein/lisp-rpc-golang/parser"
 )
 
-// DefMsg represents a parsed (def-msg name :key type ...) specification declaration.
+// DefMsg represents a parsed (def-msg name [doc] :key type ...) specification declaration.
 type DefMsg struct {
 	MsgName  string
+	Doc      string
 	RestExpr []parser.Expr
 	MsgType  RPCDataType
 }
 
-// NewDefMsg creates a new DefMsg validating that restExpr forms keyword-value pairs.
+// NewDefMsg creates a new DefMsg validating that restExpr forms keyword-value pairs (with optional leading docstring).
 func NewDefMsg(msgName string, restExpr []parser.Expr, ty RPCDataType) (*DefMsg, error) {
-	if len(restExpr)%2 != 0 {
+	var doc string
+	rest := restExpr
+	if len(rest) > 0 {
+		first := &rest[0]
+		if first.Kind == parser.ExprAtom && first.Atom.Kind == parser.TypeValueString {
+			doc = first.Atom.Str
+			rest = rest[1:]
+		}
+	}
+
+	if len(rest)%2 != 0 {
 		return nil, errors.New("parsing failed, msg name arguments should be keyword-value pairs")
 	}
 
-	for i := 0; i < len(restExpr); i += 2 {
-		k := &restExpr[i]
+	for i := 0; i < len(rest); i += 2 {
+		k := &rest[i]
 		if k.Kind != parser.ExprAtom || k.Atom.Kind != parser.TypeValueKeyword {
 			return nil, errors.New("parsing failed, msg name arguments should be keyword-value pairs")
 		}
@@ -30,7 +41,8 @@ func NewDefMsg(msgName string, restExpr []parser.Expr, ty RPCDataType) (*DefMsg,
 
 	return &DefMsg{
 		MsgName:  msgName,
-		RestExpr: restExpr,
+		Doc:      doc,
+		RestExpr: rest,
 		MsgType:  ty,
 	}, nil
 }
@@ -178,14 +190,19 @@ func (dm *DefMsg) CreateGenStructs() ([]*GeneratedStruct, error) {
 		}
 	}
 
-	mainStruct := NewGeneratedStruct(dm.MsgName, fields, "", dm.MsgType, "")
+	mainStruct := NewGeneratedStruct(dm.MsgName, fields, dm.Doc, dm.MsgType, "")
 	res = append(res, mainStruct)
 
 	return res, nil
 }
 
-// GenCode renders Go code for this message and any sub-structs.
-func (dm *DefMsg) GenCode() (string, error) {
+// GenCode renders Go code for this message and any sub-structs using the specified generation option.
+func (dm *DefMsg) GenCode(args ...GenerateArg) (string, error) {
+	arg := GenerateArgDefault
+	if len(args) > 0 {
+		arg = args[0]
+	}
+
 	structs, err := dm.CreateGenStructs()
 	if err != nil {
 		return "", err
@@ -197,11 +214,15 @@ func (dm *DefMsg) GenCode() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		implCode, err := RenderTemplate(DefaultRPCImplTemplate(), s)
-		if err != nil {
-			return "", err
+		if arg == GenerateArgWithServer {
+			implCode, err := RenderTemplate(DefaultRPCImplTemplate(), s)
+			if err != nil {
+				return "", err
+			}
+			bucket = append(bucket, sCode+"\n\n"+implCode)
+		} else {
+			bucket = append(bucket, sCode)
 		}
-		bucket = append(bucket, sCode+"\n\n"+implCode)
 	}
 
 	return strings.Join(bucket, "\n\n"), nil

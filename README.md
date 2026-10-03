@@ -1,0 +1,253 @@
+# Lisp-RPC Go
+
+Go implementation of [Lisp-RPC](https://lisp-rpc.ccqpein.me), a lightweight, S-expression-based Remote Procedure Call protocol designed for simplicity and flexibility.
+
+This repository translates the design and logic of the reference Rust implementation ([lisp-rpc](https://github.com/ccqpein/lisp-rpc)) into idiomatic Go.
+
+## Overview
+
+Lisp-RPC combines the human readability of text-based formats with the strong typing of RPC protocols using Lisp S-expression syntax.
+
+### Use Cases
+
+- **Dynamic Communication (Plain Mode)**: Inspectable, schema-free messaging using raw S-expressions.
+- **Typed Microservices (Spec Mode)**: Schema-defined client/server communication with code generation.
+- **Inter-Process & Network RPC**: Lightweight alternative to JSON-RPC and gRPC without verbose nesting or complex IDL setups.
+
+## Specification
+
+Read the [Lisp-RPC Specification](https://lisp-rpc.ccqpein.me).
+
+## Related Repositories
+
+- [lisp-rpc-doc](https://github.com/ccqpein/lisp-rpc-doc): Specification documentation and website sources.
+- [lisp-rpc](https://github.com/ccqpein/lisp-rpc): Reference Rust implementation of Lisp-RPC.
+- [lisp-rpc.cl](https://github.com/ccqpein/lisp-rpc.cl): Common Lisp implementation of Lisp-RPC.
+- [lisp-rpc-json-convertor](https://github.com/ccqpein/lisp-rpc-json-convertor): Bidirectional converter between JSON and Lisp-RPC.
+
+## Installation
+
+To install the Lisp-RPC Go generator CLI:
+
+```shell
+go install github.com/ccqpein/lisp-rpc-golang/cmd/lisp-rpc-golang-generator@latest
+```
+
+## Package Overview
+
+### `parser` (`github.com/ccqpein/lisp-rpc-golang/parser`)
+
+The core tokenizer and parser for Lisp-RPC S-expressions. It supports:
+- Full S-expression parsing: Atoms (symbols, string literals, keywords, numbers), lists `(...)`, quotes `'...`, and comments `;...`.
+- Incremental / chunked streaming tokenization with multi-byte UTF-8 boundary buffering.
+- Resumable parser state machine (`ParsingStatus`, `ParsedExpr`) for network streams and async readers.
+- `StreamParser` for consuming expressions from any standard `io.Reader` (e.g. `net.Conn`, `os.File`, `bytes.Buffer`).
+
+### `rawdata` (`github.com/ccqpein/lisp-rpc-golang/rawdata`)
+
+Dynamic, schema-free S-expression parsing and manipulation for Plain Mode:
+- Named S-expression data structures (`ExprData`): `(name :key1 val1 :key2 val2)`.
+- Quoted sequence lists (`ListData`): `'("a" "b" 1)`.
+- Quoted key-value maps (`MapData`): `'(:key value)`.
+- Unified `Data` enum with `Get()`, `GetString()`, `ToInt()`, `ToFloat()`, and deep `Equal()`.
+- Streaming data adapter (`RawDataGenerator`) wrapping `StreamParser`.
+- File parser and indexer (`DataFile`).
+
+### `server` (`github.com/ccqpein/lisp-rpc-golang/server`)
+
+Server dispatch engine and RPC handler registration:
+- Native concurrent handler registration (`Register`, `RegisterNamed`).
+- Automatic struct serialization/deserialization between Go types and Lisp S-expressions using `lisp-rpc:"..."` tags.
+- Full support for `context.Context` in handler functions.
+- Native `net/http.Handler` implementation for standard Go HTTP servers and `httptest`.
+- Command routing matching Rust Lisp-RPC dispatch semantics.
+
+### `generator` (`github.com/ccqpein/lisp-rpc-golang/generator`)
+
+Schema parser and code generator transforming `.lisprpc` specification files into typed Go libraries:
+- Parses `(def-rpc-package name)`, `(def-msg name [doc] :key type ...)`, and `(def-rpc name [doc] '(:key type ...) 'return-type)`.
+- Attaches docstrings from `def-msg` and `def-rpc` as idiomatic Go comments on generated structs.
+- Handles nested anonymous maps, list sequences `(list 'type)`, and optional values `(optional 'type)`.
+- Generates idiomatic Go structs with exported `PascalCase` field names and `lisp-rpc:"kebab-case"` tags.
+- Supports generating data structures only (default) or implementing server RPC traits (`ToRPCType`, `ReturnType`) with `--with-server` / `-w`.
+- Sub-maps self-describe via `RPCTypeMap` with zero global state.
+- Provides the `lisp-rpc-golang-generator` CLI tool (`github.com/ccqpein/lisp-rpc-golang/cmd/lisp-rpc-golang-generator`).
+
+## Rust to Go Mapping Reference
+
+| Rust (`lisp-rpc` crates) | Go (`lisp-rpc-golang`) | Description |
+|---|---|---|
+| `ParserError` | `ParserError`, `ParserErrorKind` | Error enum and types (`ErrInvalidStart`, `ErrInvalidToken`, `ErrCorruptData`, `ErrUnknownToken`) |
+| `TypeValueNumber` | `TypeValueNumber` | Numeric representation with `Kind` (`NumberInt`, `NumberFloat`), `ToInt()`, `ToFloat()` |
+| `TypeValue` | `TypeValue` | Typed atom value: `Symbol`, `String`, `Keyword`, `Number` |
+| `Atom` | `Atom` | Atomic token: `NewAtomSymbol()`, `NewAtomString()`, `NewAtomKeyword()`, `NewAtomNumber()` |
+| `Expr` | `Expr` | AST node: `ExprAtom`, `ExprList`, `ExprQuote`, `ExprComment`, with `.String()`, `.FilterOutComments` |
+| `ParsingStatus` | `ParsingStatus` | Parser state machine: `Clean`, `InReadExpr`, `InReadString`, `InReadQuote`, `InReadKeyword`, etc. |
+| `StreamParser<S>` | `StreamParser` | Streaming parser wrapping `io.Reader` with `.Next()`, `.All()`, and `.Iter()` |
+| `Data` | `Data` | Root dynamic data sum type with `Get()`, `GetString()`, `ToInt()`, `ToFloat()` |
+| `ExprData` | `ExprData` | Named S-expression data structure: `(name :k1 v1 :k2 v2)` |
+| `ListData` | `ListData` | Quoted sequence data: `'("a" "b" 1)` |
+| `MapData` | `MapData` | Quoted key-value map: `'(:k1 v1 :k2 v2)` |
+| `RawDataGenerator<S>` | `RawDataGenerator` | Streaming dynamic data adapter wrapping `StreamParser` |
+| `DataFile` | `DataFile` | Parses and indexes multiple S-expression data records from file |
+| `RPCType` | `RPCType` | Classification of RPC commands and messages (`RPC`, `Msg`, `Map`, `List`, `V`) |
+| `ToRPCType` | `ToRPCType` | Interface defining RPC classification for types |
+| `RPCServer` | `Server` | Dispatch server (`server.New()`) with `.Register()`, `.Handle()`, `.HandleContext()`, `.ServeHTTP()` |
+| `DefPkg` | `DefPkg` | Parses `(def-rpc-package name)` and generates `go.mod` |
+| `DefMsg` | `DefMsg` | Parses `(def-msg name [doc] :key type ...)` and generates structs with doc comments |
+| `DefRPC` | `DefRPC` | Parses `(def-rpc name [doc] '(:key type ...) 'return)` and generates RPC request/response structs |
+| `GenerateArg` | `GenerateArg` | Code generator mode: `GenerateArgDefault`, `GenerateArgWithServer` |
+| `SpecFile` | `SpecFile` | Multi-spec file parser and project generator (`GenCode`, `GenCodeString`) |
+
+## Usage Examples
+
+### 1. Basic Parsing
+
+```go
+package main
+
+import (
+    "fmt"
+    "strings"
+
+    "github.com/ccqpein/lisp-rpc-golang/parser"
+)
+
+func main() {
+    p := parser.New()
+
+    input := `(def-rpc get-book "Retrieve book info" '(:title 'string :id 1984) 'book-info)`
+    if err := p.Tokenize(strings.NewReader(input)); err != nil {
+        panic(err)
+    }
+
+    if err := p.Parse(); err != nil {
+        panic(err)
+    }
+
+    for _, expr := range p.Exprs {
+        fmt.Println("Parsed:", expr.String())
+    }
+}
+```
+
+### 2. Dynamic Raw Data
+
+```go
+package main
+
+import (
+    "fmt"
+
+    "github.com/ccqpein/lisp-rpc-golang/rawdata"
+)
+
+func main() {
+    // Create a dynamic RPC data expression: (get-book :title "The Hobbit" :year 1937)
+    rpcData, err := rawdata.NewData(
+        "get-book",
+        rawdata.NewPair("title", "The Hobbit"),
+        rawdata.NewPair("year", 1937),
+    )
+    if err != nil {
+        panic(err)
+    }
+
+    // Serialize to S-expression string
+    rawStr := rpcData.String()
+    fmt.Println("Serialized:", rawStr)
+
+    // Parse back from string
+    parsed, err := rawdata.DataFromRootStr(rawStr, nil)
+    if err != nil {
+        panic(err)
+    }
+
+    if yearVal := parsed.Get("year"); yearVal != nil {
+        year, _ := yearVal.ToInt()
+        fmt.Println("Year:", year)
+    }
+}
+```
+
+### 3. RPC Server with HTTP Integration
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "net/http"
+
+    "github.com/ccqpein/lisp-rpc-golang/server"
+)
+
+type GetBook struct {
+    Title string `lisp-rpc:"title"`
+}
+
+func (GetBook) ToRPCType() server.RPCType {
+    return server.NewRPCTypeRPC("get-book")
+}
+
+type BookResp struct {
+    Author string `lisp-rpc:"author"`
+}
+
+func main() {
+    s := server.New()
+
+    // Register an RPC handler
+    s.Register(func(ctx context.Context, req GetBook) (BookResp, error) {
+        return BookResp{Author: "Author of " + req.Title}, nil
+    })
+
+    // 1. Direct dispatch
+    resp, _ := s.Handle(`(get-book :title "The Hobbit")`)
+    fmt.Println("Response:", resp)
+    // Output: (book-resp :author "Author of The Hobbit")
+
+    // 2. Start HTTP server directly (server implements http.Handler)
+    http.ListenAndServe(":8080", s)
+}
+```
+
+### 4. Spec-Mode Code Generation
+
+Given a specification file `spec.lisprpc`:
+
+```lisp
+(def-rpc-package demo)
+
+(def-msg book-info
+  "Information about a book."
+  :title 'string
+  :authors (list 'string))
+
+(def-rpc get-book
+  "Retrieve book details by title."
+  '(:title 'string)
+  'book-info)
+```
+
+Generate the typed Go library:
+
+```shell
+# Generate data structures only (default)
+lisp-rpc-golang-generator -input spec.lisprpc -output ./output
+
+# Generate data structures and implement server RPC traits
+lisp-rpc-golang-generator -input spec.lisprpc -output ./output --with-server
+```
+
+This outputs `./output/demo/go.mod` and `./output/demo/rpc_libs.go` ready for immediate use.
+
+## Examples Directory
+
+Working, runnable examples are provided in the `examples/` folder:
+
+1. [examples/spec-mode-generate-lib/](examples/spec-mode-generate-lib/): Schema file and CLI usage instructions.
+2. [examples/server-with-custom-structure/](examples/server-with-custom-structure/): Typed Go struct models, handler registration, and HTTP integration.
+3. [examples/plain-mode-read-and-write-data/](examples/plain-mode-read-and-write-data/): Dynamic `rawdata.Data` creation, serialization, and parsing.
+4. [examples/streaming-raw-data/](examples/streaming-raw-data/): Streaming raw S-expressions over chunked streams with `RawDataGenerator`.

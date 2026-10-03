@@ -123,7 +123,12 @@ func ParseSpecString(source string) (*SpecFile, error) {
 }
 
 // GenCodeString generates the file contents for all target files in memory.
-func (sf *SpecFile) GenCodeString() (map[string]string, error) {
+func (sf *SpecFile) GenCodeString(args ...GenerateArg) (map[string]string, error) {
+	arg := GenerateArgDefault
+	if len(args) > 0 {
+		arg = args[0]
+	}
+
 	files := make(map[string]string)
 
 	pkgName := sf.targetPkgName
@@ -133,6 +138,7 @@ func (sf *SpecFile) GenCodeString() (map[string]string, error) {
 
 	header, err := RenderTemplate(DefaultHeaderTemplate(), map[string]any{
 		"PackageName": pkgName,
+		"WithServer":  arg == GenerateArgWithServer,
 	})
 	if err != nil {
 		return nil, err
@@ -151,11 +157,15 @@ func (sf *SpecFile) GenCodeString() (map[string]string, error) {
 			if err != nil {
 				return nil, err
 			}
-			implCode, err := RenderTemplate(DefaultRPCImplTemplate(), s)
-			if err != nil {
-				return nil, err
+			if arg == GenerateArgWithServer {
+				implCode, err := RenderTemplate(DefaultRPCImplTemplate(), s)
+				if err != nil {
+					return nil, err
+				}
+				libBlocks = append(libBlocks, sCode+"\n\n"+implCode)
+			} else {
+				libBlocks = append(libBlocks, sCode)
 			}
-			libBlocks = append(libBlocks, sCode+"\n\n"+implCode)
 		}
 	}
 
@@ -169,11 +179,15 @@ func (sf *SpecFile) GenCodeString() (map[string]string, error) {
 			if err != nil {
 				return nil, err
 			}
-			implCode, err := RenderTemplate(DefaultRPCImplTemplate(), s)
-			if err != nil {
-				return nil, err
+			if arg == GenerateArgWithServer {
+				implCode, err := RenderTemplate(DefaultRPCImplTemplate(), s)
+				if err != nil {
+					return nil, err
+				}
+				libBlocks = append(libBlocks, sCode+"\n\n"+implCode)
+			} else {
+				libBlocks = append(libBlocks, sCode)
 			}
-			libBlocks = append(libBlocks, sCode+"\n\n"+implCode)
 		}
 	}
 
@@ -199,7 +213,7 @@ func (sf *SpecFile) GenCodeString() (map[string]string, error) {
 }
 
 // GenCode writes generated code files to disk under outputPath/<target_pkg_name>/.
-func (sf *SpecFile) GenCode(outputPath string) error {
+func (sf *SpecFile) GenCode(outputPath string, args ...GenerateArg) error {
 	pkgName := sf.targetPkgName
 	if pkgName == "" {
 		return fmt.Errorf("no target package name specified")
@@ -210,7 +224,7 @@ func (sf *SpecFile) GenCode(outputPath string) error {
 		return fmt.Errorf("failed to create target directory %s: %w", targetDir, err)
 	}
 
-	files, err := sf.GenCodeString()
+	files, err := sf.GenCodeString(args...)
 	if err != nil {
 		return err
 	}
