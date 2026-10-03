@@ -4,6 +4,35 @@ Go implementation of [[https://lisp-rpc.ccqpein.me][Lisp-RPC]], a lightweight, S
 
 This repository translates the design and logic of the reference Rust implementation ([[https://github.com/ccqpein/lisp-rpc][lisp-rpc]]) into idiomatic Go.
 
+* Overview
+
+Lisp-RPC combines the human readability of text-based formats with the strong typing of RPC protocols using Lisp S-expression syntax.
+
+** Use Cases
+
+- *Dynamic Communication (Plain Mode)*: Inspectable, schema-free messaging using raw S-expressions.
+- *Typed Microservices (Spec Mode)*: Schema-defined client/server communication with code generation.
+- *Inter-Process & Network RPC*: Lightweight alternative to JSON-RPC and gRPC without verbose nesting or complex IDL setups.
+
+* Specification
+
+Read the [[https://lisp-rpc.ccqpein.me][Lisp-RPC Specification]].
+
+* Related Repositories
+
+- [[https://github.com/ccqpein/lisp-rpc-doc][lisp-rpc-doc]]: Specification documentation and website sources.
+- [[https://github.com/ccqpein/lisp-rpc][lisp-rpc]]: Reference Rust implementation of Lisp-RPC.
+- [[https://github.com/ccqpein/lisp-rpc.cl][lisp-rpc.cl]]: Common Lisp implementation of Lisp-RPC.
+- [[https://github.com/ccqpein/lisp-rpc-json-convertor][lisp-rpc-json-convertor]]: Bidirectional converter between JSON and Lisp-RPC.
+
+* Installation
+
+To install the Lisp-RPC Go generator CLI:
+
+#+begin_src shell
+  go install github.com/ccqpein/lisp-rpc-golang/cmd/lisp-rpc-golang-generator@latest
+#+end_src
+
 * Package Overview
 
 ** =parser= (=github.com/ccqpein/lisp-rpc-golang/parser=)
@@ -36,14 +65,13 @@ Server dispatch engine and RPC handler registration:
 ** =generator= (=github.com/ccqpein/lisp-rpc-golang/generator=)
 
 Schema parser and code generator transforming =.lisprpc= specification files into typed Go libraries:
-- Parses ~(def-rpc-package name)~, ~(def-msg name :key type ...)~, and ~(def-rpc name '(:key type ...) 'return-type)~.
+- Parses ~(def-rpc-package name)~, ~(def-msg name [doc] :key type ...)~, and ~(def-rpc name [doc] '(:key type ...) 'return-type)~.
+- Attaches docstrings from ~def-msg~ and ~def-rpc~ as idiomatic Go comments on generated structs.
 - Handles nested anonymous maps, list sequences ~(list 'type)~, and optional values ~(optional 'type)~.
 - Generates idiomatic Go structs with exported ~PascalCase~ field names and ~lisp-rpc:"kebab-case"~ tags.
-- Implements ~ToRPCType() server.RPCType~ methods and RPC ~ReturnType()~ method links.
+- Supports generating data structures only (default) or implementing server RPC traits (~ToRPCType~, ~ReturnType~) with ~--with-server~ / ~-w~.
 - Sub-maps self-describe via ~RPCTypeMap~ with zero global state.
 - Provides the ~lisp-rpc-golang-generator~ CLI tool (=github.com/ccqpein/lisp-rpc-golang/cmd/lisp-rpc-golang-generator=).
-
-
 
 * Rust to Go Mapping Reference
 
@@ -66,10 +94,10 @@ Schema parser and code generator transforming =.lisprpc= specification files int
 | ~ToRPCType~              | ~ToRPCType~                    | Interface defining RPC classification for types                                            |
 | ~RPCServer~              | ~Server~                       | Dispatch server (~server.New()~) with ~.Register()~, ~.Handle()~, ~.HandleContext()~, ~.ServeHTTP()~ |
 | ~DefPkg~                 | ~DefPkg~                       | Parses ~(def-rpc-package name)~ and generates ~go.mod~                                         |
-| ~DefMsg~                 | ~DefMsg~                       | Parses ~(def-msg name :key type ...)~ and generates structs with ~ToRPCType~                   |
-| ~DefRPC~                 | ~DefRPC~                       | Parses ~(def-rpc name '(:key type ...) 'return)~ and generates RPC request/response structs  |
+| ~DefMsg~                 | ~DefMsg~                       | Parses ~(def-msg name [doc] :key type ...)~ and generates structs with doc comments          |
+| ~DefRPC~                 | ~DefRPC~                       | Parses ~(def-rpc name [doc] '(:key type ...) 'return)~ and generates RPC request/response structs |
+| ~GenerateArg~            | ~GenerateArg~                  | Code generator mode: ~GenerateArgDefault~, ~GenerateArgWithServer~                         |
 | ~SpecFile~               | ~SpecFile~                     | Multi-spec file parser and project generator (~GenCode~, ~GenCodeString~)                      |
-
 
 * Usage Examples
 
@@ -88,7 +116,7 @@ Schema parser and code generator transforming =.lisprpc= specification files int
   func main() {
       p := parser.New()
 
-      input := `(def-rpc get-book '(:title 'string :id 1984) 'book-info)`
+      input := `(def-rpc get-book "Retrieve book info" '(:title 'string :id 1984) 'book-info)`
       if err := p.Tokenize(strings.NewReader(input)); err != nil {
           panic(err)
       }
@@ -193,20 +221,24 @@ Given a specification file =spec.lisprpc=:
   (def-rpc-package demo)
 
   (def-msg book-info
+    "Information about a book."
     :title 'string
     :authors (list 'string))
 
   (def-rpc get-book
-      '(:title 'string)
+    "Retrieve book details by title."
+    '(:title 'string)
     'book-info)
 #+end_src
 
 Generate the typed Go library:
 
 #+begin_src shell
-  go run github.com/ccqpein/lisp-rpc-golang/cmd/lisp-rpc-golang-generator \
-      -input spec.lisprpc \
-      -output ./output
+  # Generate data structures only (default)
+  lisp-rpc-golang-generator -input spec.lisprpc -output ./output
+
+  # Generate data structures and implement server RPC traits
+  lisp-rpc-golang-generator -input spec.lisprpc -output ./output --with-server
 #+end_src
 
 This outputs =./output/demo/go.mod= and =./output/demo/rpc_libs.go= ready for immediate use.
