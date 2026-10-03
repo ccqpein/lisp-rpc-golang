@@ -218,3 +218,21 @@ func TypeTranslate(sym string) string {
 
 	return KebabToPascalCase(sym)
 }
+
+// GenerateArg defines code generation options.
+type GenerateArg int
+
+const (
+	// GenerateArgDefault only generates structure definitions without server RPC methods.
+	GenerateArgDefault GenerateArg = iota
+	// GenerateArgWithServer generates structure definitions and implements server RPC methods (ToRPCType, ReturnType).
+	GenerateArgWithServer
+)
+
+// GenerateArgFromBool converts a withServer boolean into a GenerateArg.
+func GenerateArgFromBool(withServer bool) GenerateArg {
+	if withServer {
+		return GenerateArgWithServer
+	}
+	return GenerateArgDefault
+}

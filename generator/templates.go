@@ -43,11 +43,11 @@ go 1.22
 
 require github.com/ccqpein/lisp-rpc-golang v0.0.0`
 
-const defaultHeaderTemplate = `package {{ .PackageName }}
+const defaultHeaderTemplate = `package {{ .PackageName }}{{ if .WithServer }}
 
 import (
 	"github.com/ccqpein/lisp-rpc-golang/server"
-)`
+){{ end }}`
 
 // DefaultStructTemplate returns the default text template for generating Go structs.
 func DefaultStructTemplate() string {

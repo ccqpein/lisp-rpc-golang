@@ -197,8 +197,13 @@ func (dr *DefRPC) CreateGenStructs() ([]*GeneratedStruct, error) {
 	return res, nil
 }
 
-// GenCode renders Go code for this RPC request structure and any sub-structs.
-func (dr *DefRPC) GenCode() (string, error) {
+// GenCode renders Go code for this RPC request structure and any sub-structs using the specified generation option.
+func (dr *DefRPC) GenCode(args ...GenerateArg) (string, error) {
+	arg := GenerateArgDefault
+	if len(args) > 0 {
+		arg = args[0]
+	}
+
 	structs, err := dr.CreateGenStructs()
 	if err != nil {
 		return "", err
@@ -210,11 +215,15 @@ func (dr *DefRPC) GenCode() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		implCode, err := RenderTemplate(DefaultRPCImplTemplate(), s)
-		if err != nil {
-			return "", err
+		if arg == GenerateArgWithServer {
+			implCode, err := RenderTemplate(DefaultRPCImplTemplate(), s)
+			if err != nil {
+				return "", err
+			}
+			bucket = append(bucket, sCode+"\n\n"+implCode)
+		} else {
+			bucket = append(bucket, sCode)
 		}
-		bucket = append(bucket, sCode+"\n\n"+implCode)
 	}
 
 	return strings.Join(bucket, "\n\n"), nil

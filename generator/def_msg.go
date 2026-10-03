@@ -196,8 +196,13 @@ func (dm *DefMsg) CreateGenStructs() ([]*GeneratedStruct, error) {
 	return res, nil
 }
 
-// GenCode renders Go code for this message and any sub-structs.
-func (dm *DefMsg) GenCode() (string, error) {
+// GenCode renders Go code for this message and any sub-structs using the specified generation option.
+func (dm *DefMsg) GenCode(args ...GenerateArg) (string, error) {
+	arg := GenerateArgDefault
+	if len(args) > 0 {
+		arg = args[0]
+	}
+
 	structs, err := dm.CreateGenStructs()
 	if err != nil {
 		return "", err
@@ -209,11 +214,15 @@ func (dm *DefMsg) GenCode() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		implCode, err := RenderTemplate(DefaultRPCImplTemplate(), s)
-		if err != nil {
-			return "", err
+		if arg == GenerateArgWithServer {
+			implCode, err := RenderTemplate(DefaultRPCImplTemplate(), s)
+			if err != nil {
+				return "", err
+			}
+			bucket = append(bucket, sCode+"\n\n"+implCode)
+		} else {
+			bucket = append(bucket, sCode)
 		}
-		bucket = append(bucket, sCode+"\n\n"+implCode)
 	}
 
 	return strings.Join(bucket, "\n\n"), nil
