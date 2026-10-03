@@ -8,9 +8,10 @@ import (
 	"github.com/ccqpein/lisp-rpc-golang/parser"
 )
 
-// DefRPC represents a parsed (def-rpc name '(:key type ...) 'return-type) declaration.
+// DefRPC represents a parsed (def-rpc name [doc] '(:key type ...) 'return-type) declaration.
 type DefRPC struct {
 	RPCName    string
+	Doc        string
 	Args       []parser.Expr
 	ReturnType string
 }
@@ -46,14 +47,29 @@ func ParseDefRPCExpr(expr *parser.Expr) (*DefRPC, error) {
 	}
 	rpcName := rpcNameAtom.Atom.Str
 
-	rawArgs := deQuoted(&expr.List[2])
+	var doc string
+	idx := 2
+	if idx < len(expr.List) {
+		first := &expr.List[idx]
+		if first.Kind == parser.ExprAtom && first.Atom.Kind == parser.TypeValueString {
+			doc = first.Atom.Str
+			idx++
+		}
+	}
+
+	if idx >= len(expr.List) {
+		return nil, errors.New("parsing failed, def-rpc missing arguments")
+	}
+
+	rawArgs := deQuoted(&expr.List[idx])
 	if rawArgs.Kind != parser.ExprList {
 		return nil, errors.New("parsing failed, second arguments has to be list of keyword-value pairs")
 	}
+	idx++
 
 	var returnType string
-	if len(expr.List) > 3 {
-		rtExpr := deQuoted(&expr.List[3])
+	if idx < len(expr.List) {
+		rtExpr := deQuoted(&expr.List[idx])
 		if rtExpr.Kind != parser.ExprAtom || rtExpr.Atom.Kind != parser.TypeValueSymbol {
 			return nil, errors.New("parsing failed, return type has to be quoted")
 		}
@@ -62,6 +78,7 @@ func ParseDefRPCExpr(expr *parser.Expr) (*DefRPC, error) {
 
 	return &DefRPC{
 		RPCName:    rpcName,
+		Doc:        doc,
 		Args:       rawArgs.List,
 		ReturnType: returnType,
 	}, nil
@@ -174,7 +191,7 @@ func (dr *DefRPC) CreateGenStructs() ([]*GeneratedStruct, error) {
 		}
 	}
 
-	mainStruct := NewGeneratedStruct(dr.RPCName, fields, "", RPCDataTypeRpc, dr.ReturnType)
+	mainStruct := NewGeneratedStruct(dr.RPCName, fields, dr.Doc, RPCDataTypeRpc, dr.ReturnType)
 	res = append(res, mainStruct)
 
 	return res, nil

@@ -5,7 +5,10 @@ import (
 	"text/template"
 )
 
-const defaultStructTemplate = `type {{ .Name }} struct {
+const defaultStructTemplate = `{{- if .Comment }}
+{{- .CommentFormatted }}
+{{ end -}}
+type {{ .Name }} struct {
 {{- range .Fields }}
 {{- if .Comment }}
 	// {{ .Comment }}

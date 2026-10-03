@@ -125,6 +125,24 @@ func NewGeneratedStruct(
 	}
 }
 
+// CommentFormatted formats Comment as Go doc comments (each line prefixed with //).
+func (s GeneratedStruct) CommentFormatted() string {
+	if s.Comment == "" {
+		return ""
+	}
+	lines := strings.Split(s.Comment, "\n")
+	var formatted []string
+	for _, line := range lines {
+		trimmed := strings.TrimRight(line, "\r")
+		if strings.HasPrefix(trimmed, "//") {
+			formatted = append(formatted, trimmed)
+		} else {
+			formatted = append(formatted, "// "+trimmed)
+		}
+	}
+	return strings.Join(formatted, "\n")
+}
+
 // KebabToPascalCase converts a kebab-case or snake_case string identifier into PascalCase.
 func KebabToPascalCase(s string) string {
 	if s == "" {
