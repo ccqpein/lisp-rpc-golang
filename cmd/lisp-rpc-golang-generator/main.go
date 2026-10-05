@@ -19,6 +19,10 @@ func main() {
 	flag.StringVar(&outputPath, "o", ".", "Directory to generate output package into (shorthand)")
 	flag.StringVar(&outputPath, "output-path", ".", "Directory to generate output package into (compatibility)")
 
+	var withServer bool
+	flag.BoolVar(&withServer, "with-server", false, "Impl the struct and rpc trait for rpc server")
+	flag.BoolVar(&withServer, "w", false, "Impl the struct and rpc trait for rpc server (shorthand)")
+
 	flag.Parse()
 
 	if inputFile == "" {
@@ -40,7 +44,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := sf.GenCode(outputPath); err != nil {
+	genArg := generator.GenerateArgFromBool(withServer)
+	if err := sf.GenCode(outputPath, genArg); err != nil {
 		fmt.Fprintf(os.Stderr, "Error generating code: %v\n", err)
 		os.Exit(1)
 	}
